@@ -13,7 +13,17 @@ def create_app(config_name=None):
     config_name = config_name or os.getenv("FLASK_ENV", "development")
     app.config.from_object(config[config_name])
 
-    CORS(app, origins=config[config_name].CORS_ORIGINS)
+    # Configure CORS properly for production
+    if config_name == "production":
+        CORS(
+            app,
+            origins=["https://bowlervbatsman.netlify.app", "https://*.netlify.app"],
+            methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+            supports_credentials=True,
+        )
+    else:
+        CORS(app, origins=["http://localhost:3000", "http://127.0.0.1:3000"])
 
     logging.basicConfig(
         level=logging.INFO,
