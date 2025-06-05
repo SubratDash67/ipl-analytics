@@ -3,11 +3,22 @@ import os
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-in-production"
+
+    # Database configuration
     DATABASE_PATH = os.environ.get("DATABASE_PATH") or os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
         "data",
         "ipl_data.db",
     )
+
+    # CSV file paths for data loading
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    DATA_DIR = os.path.join(BASE_DIR, "data")
+
+    MATCHES_CSV_PATH = os.path.join(DATA_DIR, "matches.csv")
+    DELIVERIES_CSV_PATH = os.path.join(DATA_DIR, "deliveries.csv")
+
+    # CORS configuration
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
 
     # Dismissal types that credit the bowler

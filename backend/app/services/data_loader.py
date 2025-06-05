@@ -1,244 +1,206 @@
 import pandas as pd
+import sqlite3
+import os
 import logging
-from pathlib import Path
-from typing import Tuple, List, Dict, Any
-from app.models.database import db_manager
 from app.config.settings import Config
 
 
 class DataLoader:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.matches_csv_path = Config.MATCHES_CSV_PATH
-        self.deliveries_csv_path = Config.DELIVERIES_CSV_PATH
 
-    def validate_csv_files(self) -> bool:
-        if not self.matches_csv_path.exists():
-            self.logger.error(f"Matches CSV not found: {self.matches_csv_path}")
-            return False
+        # Use Config attributes safely
+        self.matches_csv_path = getattr(Config, "MATCHES_CSV_PATH", "data/matches.csv")
+        self.deliveries_csv_path = getattr(
+            Config, "DELIVERIES_CSV_PATH", "data/deliveries.csv"
+        )
+        self.database_path = getattr(Config, "DATABASE_PATH", "data/ipl_data.db")
 
-        if not self.deliveries_csv_path.exists():
-            self.logger.error(f"Deliveries CSV not found: {self.deliveries_csv_path}")
-            return False
+        # Ensure data directory exists
+        self.data_dir = os.path.dirname(self.database_path)
+        os.makedirs(self.data_dir, exist_ok=True)
 
-        return True
+        self.logger.info(f"DataLoader initialized with:")
+        self.logger.info(f"  Matches CSV: {self.matches_csv_path}")
+        self.logger.info(f"  Deliveries CSV: {self.deliveries_csv_path}")
+        self.logger.info(f"  Database: {self.database_path}")
 
-    def load_matches_csv(self) -> pd.DataFrame:
+    def check_data_files(self):
+        """Check if required data files exist"""
+        files_status = {
+            "matches_csv": os.path.exists(self.matches_csv_path),
+            "deliveries_csv": os.path.exists(self.deliveries_csv_path),
+            "database": os.path.exists(self.database_path),
+        }
+
+        self.logger.info(f"Data files status: {files_status}")
+        return files_status
+
+    def load_csv_data(self):
+        """Load data from CSV files"""
         try:
-            df = pd.read_csv(self.matches_csv_path)
-            self.logger.info(f"Loaded {len(df)} matches from CSV")
+            if not os.path.exists(self.matches_csv_path):
+                self.logger.error(f"Matches CSV not found: {self.matches_csv_path}")
+                return None, None
 
-            df = df.fillna("")
-
-            expected_columns = [
-                "id",
-                "season",
-                "city",
-                "date",
-                "match_type",
-                "player_of_match",
-                "venue",
-                "team1",
-                "team2",
-                "toss_winner",
-                "toss_decision",
-                "winner",
-                "result",
-                "result_margin",
-                "target_runs",
-                "target_overs",
-                "super_over",
-                "method",
-                "umpire1",
-                "umpire2",
-            ]
-
-            missing_columns = set(expected_columns) - set(df.columns)
-            if missing_columns:
-                self.logger.error(f"Missing columns in matches CSV: {missing_columns}")
-                raise ValueError(f"Missing required columns: {missing_columns}")
-
-            return df
-
-        except Exception as e:
-            self.logger.error(f"Error loading matches CSV: {e}")
-            raise
-
-    def load_deliveries_csv(self) -> pd.DataFrame:
-        try:
-            df = pd.read_csv(self.deliveries_csv_path)
-            self.logger.info(f"Loaded {len(df)} deliveries from CSV")
-
-            df = df.fillna("")
-
-            expected_columns = [
-                "match_id",
-                "inning",
-                "batting_team",
-                "bowling_team",
-                "over",
-                "ball",
-                "batter",
-                "bowler",
-                "non_striker",
-                "batsman_runs",
-                "extra_runs",
-                "total_runs",
-                "extras_type",
-                "is_wicket",
-                "player_dismissed",
-                "dismissal_kind",
-                "fielder",
-            ]
-
-            missing_columns = set(expected_columns) - set(df.columns)
-            if missing_columns:
+            if not os.path.exists(self.deliveries_csv_path):
                 self.logger.error(
-                    f"Missing columns in deliveries CSV: {missing_columns}"
+                    f"Deliveries CSV not found: {self.deliveries_csv_path}"
                 )
-                raise ValueError(f"Missing required columns: {missing_columns}")
+                return None, None
 
-            return df
+            matches_df = pd.read_csv(self.matches_csv_path)
+            deliveries_df = pd.read_csv(self.deliveries_csv_path)
+
+            self.logger.info(
+                f"Loaded {len(matches_df)} matches and {len(deliveries_df)} deliveries"
+            )
+            return matches_df, deliveries_df
 
         except Exception as e:
-            self.logger.error(f"Error loading deliveries CSV: {e}")
-            raise
+            self.logger.error(f"Error loading CSV data: {e}")
+            return None, None
 
-    def prepare_matches_data(self, df: pd.DataFrame) -> List[Tuple]:
-        data = []
-        for _, row in df.iterrows():
-            data.append(
-                (
-                    int(row["id"]),
-                    str(row["season"]),
-                    str(row["city"]) if row["city"] else None,
-                    str(row["date"]),
-                    str(row["match_type"]),
-                    str(row["player_of_match"]) if row["player_of_match"] else None,
-                    str(row["venue"]),
-                    str(row["team1"]),
-                    str(row["team2"]),
-                    str(row["toss_winner"]),
-                    str(row["toss_decision"]),
-                    str(row["winner"]) if row["winner"] else None,
-                    str(row["result"]),
-                    int(row["result_margin"]) if row["result_margin"] else None,
-                    int(row["target_runs"]) if row["target_runs"] else None,
-                    int(row["target_overs"]) if row["target_overs"] else None,
-                    str(row["super_over"]),
-                    str(row["method"]) if row["method"] else None,
-                    str(row["umpire1"]) if row["umpire1"] else None,
-                    str(row["umpire2"]) if row["umpire2"] else None,
-                )
-            )
-        return data
-
-    def prepare_deliveries_data(self, df: pd.DataFrame) -> List[Tuple]:
-        data = []
-        for _, row in df.iterrows():
-            data.append(
-                (
-                    int(row["match_id"]),
-                    int(row["inning"]),
-                    str(row["batting_team"]),
-                    str(row["bowling_team"]),
-                    int(row["over"]),
-                    int(row["ball"]),
-                    str(row["batter"]),
-                    str(row["bowler"]),
-                    str(row["non_striker"]),
-                    int(row["batsman_runs"]),
-                    int(row["extra_runs"]),
-                    int(row["total_runs"]),
-                    str(row["extras_type"]) if row["extras_type"] else None,
-                    int(row["is_wicket"]),
-                    str(row["player_dismissed"]) if row["player_dismissed"] else None,
-                    str(row["dismissal_kind"]) if row["dismissal_kind"] else None,
-                    str(row["fielder"]) if row["fielder"] else None,
-                )
-            )
-        return data
-
-    def insert_matches_data(self, data: List[Tuple]) -> int:
-        query = """
-            INSERT OR REPLACE INTO matches (
-                id, season, city, date, match_type, player_of_match, venue,
-                team1, team2, toss_winner, toss_decision, winner, result,
-                result_margin, target_runs, target_overs, super_over, method,
-                umpire1, umpire2
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """
-
-        return db_manager.execute_bulk_insert(query, data)
-
-    def insert_deliveries_data(self, data: List[Tuple]) -> int:
-        query = """
-            INSERT INTO deliveries (
-                match_id, inning, batting_team, bowling_team, over, ball,
-                batter, bowler, non_striker, batsman_runs, extra_runs,
-                total_runs, extras_type, is_wicket, player_dismissed,
-                dismissal_kind, fielder
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """
-
-        return db_manager.execute_bulk_insert(query, data)
-
-    def load_all_data(self) -> Tuple[int, int]:
-        if not self.validate_csv_files():
-            raise FileNotFoundError("Required CSV files not found")
-
+    def create_database_tables(self):
+        """Create database tables if they don't exist"""
         try:
-            db_manager.create_tables()
+            conn = sqlite3.connect(self.database_path)
+            cursor = conn.cursor()
 
-            if db_manager.get_table_count("matches") > 0:
-                self.logger.info("Database already populated, skipping data load")
-                matches_count = db_manager.get_table_count("matches")
-                deliveries_count = db_manager.get_table_count("deliveries")
-                return matches_count, deliveries_count
+            # Create matches table
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS matches (
+                    id INTEGER PRIMARY KEY,
+                    season TEXT,
+                    city TEXT,
+                    date TEXT,
+                    team1 TEXT,
+                    team2 TEXT,
+                    toss_winner TEXT,
+                    toss_decision TEXT,
+                    result TEXT,
+                    dl_applied INTEGER,
+                    winner TEXT,
+                    win_by_runs INTEGER,
+                    win_by_wickets INTEGER,
+                    player_of_match TEXT,
+                    venue TEXT,
+                    umpire1 TEXT,
+                    umpire2 TEXT,
+                    umpire3 TEXT,
+                    target_runs INTEGER,
+                    target_overs REAL,
+                    super_over INTEGER,
+                    method TEXT,
+                    eliminator TEXT
+                )
+            """
+            )
 
-            self.logger.info("Loading matches data...")
-            matches_df = self.load_matches_csv()
-            matches_data = self.prepare_matches_data(matches_df)
-            matches_inserted = self.insert_matches_data(matches_data)
+            # Create deliveries table
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS deliveries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    match_id INTEGER,
+                    inning INTEGER,
+                    batting_team TEXT,
+                    bowling_team TEXT,
+                    over INTEGER,
+                    ball INTEGER,
+                    batter TEXT,
+                    non_striker TEXT,
+                    bowler TEXT,
+                    batsman_runs INTEGER,
+                    extra_runs INTEGER,
+                    total_runs INTEGER,
+                    is_wicket INTEGER,
+                    dismissal_kind TEXT,
+                    player_dismissed TEXT,
+                    fielder TEXT,
+                    extras_type TEXT,
+                    FOREIGN KEY (match_id) REFERENCES matches (id)
+                )
+            """
+            )
 
-            self.logger.info(f"Inserted {matches_inserted} matches")
-
-            self.logger.info("Loading deliveries data...")
-            deliveries_df = self.load_deliveries_csv()
-            deliveries_data = self.prepare_deliveries_data(deliveries_df)
-            deliveries_inserted = self.insert_deliveries_data(deliveries_data)
-
-            self.logger.info(f"Inserted {deliveries_inserted} deliveries")
-
-            self.logger.info("Data loading completed successfully")
-            return matches_inserted, deliveries_inserted
+            conn.commit()
+            conn.close()
+            self.logger.info("Database tables created successfully")
+            return True
 
         except Exception as e:
-            self.logger.error(f"Error during data loading: {e}")
-            raise
+            self.logger.error(f"Error creating database tables: {e}")
+            return False
 
-    def get_data_summary(self) -> Dict[str, Any]:
+    def load_data_to_database(self):
+        """Load CSV data into SQLite database"""
         try:
-            summary = {
-                "matches_count": db_manager.get_table_count("matches"),
-                "deliveries_count": db_manager.get_table_count("deliveries"),
-                "seasons": len(
-                    db_manager.execute_query("SELECT DISTINCT season FROM matches")
-                ),
-                "venues": len(
-                    db_manager.execute_query("SELECT DISTINCT venue FROM matches")
-                ),
-                "batters": len(
-                    db_manager.execute_query("SELECT DISTINCT batter FROM deliveries")
-                ),
-                "bowlers": len(
-                    db_manager.execute_query("SELECT DISTINCT bowler FROM deliveries")
-                ),
+            matches_df, deliveries_df = self.load_csv_data()
+
+            if matches_df is None or deliveries_df is None:
+                self.logger.error("Failed to load CSV data")
+                return False
+
+            # Create tables
+            if not self.create_database_tables():
+                return False
+
+            # Load data into database
+            conn = sqlite3.connect(self.database_path)
+
+            # Load matches
+            matches_df.to_sql("matches", conn, if_exists="replace", index=False)
+            self.logger.info(f"Loaded {len(matches_df)} matches into database")
+
+            # Load deliveries
+            deliveries_df.to_sql("deliveries", conn, if_exists="replace", index=False)
+            self.logger.info(f"Loaded {len(deliveries_df)} deliveries into database")
+
+            conn.close()
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error loading data to database: {e}")
+            return False
+
+    def get_database_stats(self):
+        """Get basic statistics about the database"""
+        try:
+            if not os.path.exists(self.database_path):
+                return {"error": "Database not found"}
+
+            conn = sqlite3.connect(self.database_path)
+            cursor = conn.cursor()
+
+            # Get table counts
+            cursor.execute("SELECT COUNT(*) FROM matches")
+            matches_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM deliveries")
+            deliveries_count = cursor.fetchone()[0]
+
+            # Get unique players
+            cursor.execute("SELECT COUNT(DISTINCT batter) FROM deliveries")
+            batters_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(DISTINCT bowler) FROM deliveries")
+            bowlers_count = cursor.fetchone()[0]
+
+            conn.close()
+
+            return {
+                "matches": matches_count,
+                "deliveries": deliveries_count,
+                "batters": batters_count,
+                "bowlers": bowlers_count,
             }
-            return summary
+
         except Exception as e:
-            self.logger.error(f"Error generating data summary: {e}")
-            return {}
+            self.logger.error(f"Error getting database stats: {e}")
+            return {"error": str(e)}
 
 
+# Create global instance
 data_loader = DataLoader()
