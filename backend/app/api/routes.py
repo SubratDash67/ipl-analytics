@@ -15,6 +15,7 @@ def health_check():
                 "status": "IPL Analytics API is running",
                 "timestamp": datetime.now().isoformat(),
                 "version": "2.0.0",
+                "local": True,
             }
         ),
         200,

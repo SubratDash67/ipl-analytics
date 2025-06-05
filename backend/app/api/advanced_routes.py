@@ -31,7 +31,7 @@ def get_player_partnerships(player):
                     "batsman2": partnership.batsman2,
                     "runs_scored": partnership.runs_scored,
                     "balls_faced": partnership.balls_faced,
-                    "strike_rate": partnership.partnership_sr,
+                    "partnership_sr": partnership.partnership_sr,
                     "boundaries": partnership.boundaries,
                     "dot_balls": partnership.dot_balls,
                 }
@@ -171,9 +171,7 @@ def get_pressure_analysis(batter, bowler):
                     "pressure_analysis": {
                         "pressure_partnerships": len(pressure_partnerships),
                         "death_overs_performance": death_overs_analysis,
-                        "pressure_situations": pressure_partnerships[
-                            :10
-                        ],  # Top 10 pressure moments
+                        "pressure_situations": pressure_partnerships[:10],
                     },
                 }
             ),

@@ -3,6 +3,7 @@ import axios from 'axios'
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 console.log('API_BASE_URL:', API_BASE_URL)
+console.log('Environment:', import.meta.env.MODE)
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -17,7 +18,6 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     console.log('API Request:', config.method?.toUpperCase(), config.url)
-    console.log('Full URL:', config.baseURL + config.url)
     return config
   },
   (error) => {
@@ -29,32 +29,30 @@ api.interceptors.request.use(
 // Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', response.status, response.data)
+    console.log('API Response:', response.status, 'Success')
     return response
   },
   (error) => {
     console.error('API Error:', error.response?.data || error.message)
-    console.error('API Error Status:', error.response?.status)
-    console.error('API Error URL:', error.config?.url)
     return Promise.reject(error)
   }
 )
 
 export const apiService = {
   async getDataSummary() {
-    const response = await api.get('/data/summary')  // Fixed: was /summary
+    const response = await api.get('/data/summary')
     return response.data
   },
 
   async searchPlayers(query, type = 'both') {
-    const response = await api.get('/players/search', {  // Fixed: was /search
+    const response = await api.get('/players/search', {
       params: { q: query, type }
     })
     return response.data
   },
 
   async getHeadToHeadStats(batter, bowler, filters = {}) {
-    const response = await api.get(`/stats/head-to-head/${encodeURIComponent(batter)}/${encodeURIComponent(bowler)}`, {  // Fixed: was /head-to-head
+    const response = await api.get(`/stats/head-to-head/${encodeURIComponent(batter)}/${encodeURIComponent(bowler)}`, {
       params: filters
     })
     return response.data
@@ -66,7 +64,7 @@ export const apiService = {
   },
 
   async getPlayerStats(playerName, playerType) {
-    const response = await api.get(`/stats/player/${encodeURIComponent(playerName)}`, {  // Fixed: was /player
+    const response = await api.get(`/stats/player/${encodeURIComponent(playerName)}`, {
       params: { type: playerType }
     })
     return response.data

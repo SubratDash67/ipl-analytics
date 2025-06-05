@@ -13,17 +13,14 @@ def create_app(config_name=None):
     config_name = config_name or os.getenv("FLASK_ENV", "development")
     app.config.from_object(config[config_name])
 
-    # Configure CORS properly for production
-    if config_name == "production":
-        CORS(
-            app,
-            origins=["https://bowlervbatsman.netlify.app", "https://*.netlify.app"],
-            methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-            supports_credentials=True,
-        )
-    else:
-        CORS(app, origins=["http://localhost:3000", "http://127.0.0.1:3000"])
+    # Configure CORS for local development
+    CORS(
+        app,
+        origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+        supports_credentials=False,
+    )
 
     logging.basicConfig(
         level=logging.INFO,
@@ -36,7 +33,22 @@ def create_app(config_name=None):
 
     @app.route("/")
     def health():
-        return {"status": "IPL Analytics API is running", "version": "2.0.0"}
+        return {
+            "status": "IPL Analytics API is running locally",
+            "version": "2.0.0",
+            "environment": config_name,
+            "endpoints": {
+                "health": "/health",
+                "data_summary": "/api/data/summary",
+                "player_search": "/api/players/search",
+                "head_to_head": "/api/stats/head-to-head/{batter}/{bowler}",
+                "advanced": "/api/advanced/*",
+            },
+        }
+
+    @app.route("/health")
+    def health_check():
+        return {"status": "healthy", "service": "ipl-analytics-backend", "local": True}
 
     @app.errorhandler(404)
     def not_found(error):

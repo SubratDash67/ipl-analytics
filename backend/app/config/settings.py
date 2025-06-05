@@ -2,9 +2,9 @@ import os
 
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-in-production"
+    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-for-local-development"
 
-    # Database configuration
+    # Database configuration for local development
     DATABASE_PATH = os.environ.get("DATABASE_PATH") or os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
         "data",
@@ -19,7 +19,7 @@ class Config:
     DELIVERIES_CSV_PATH = os.path.join(DATA_DIR, "deliveries.csv")
 
     # CORS configuration
-    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
 
     # Dismissal types that credit the bowler
     DISMISSAL_TYPES_BOWLER_CREDIT = ["bowled", "lbw", "caught", "stumped", "hit wicket"]

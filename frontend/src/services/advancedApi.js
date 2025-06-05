@@ -2,35 +2,20 @@ import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-console.log('Advanced API_BASE_URL:', API_BASE_URL)
-
 const advancedApi = axios.create({
   baseURL: `${API_BASE_URL}/advanced`,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false
 })
 
-advancedApi.interceptors.request.use(
-  (config) => {
-    console.log('Advanced API Request:', config.method?.toUpperCase(), config.url)
-    return config
-  },
-  (error) => {
-    console.error('Advanced API Request Error:', error)
-    return Promise.reject(error)
-  }
-)
-
 advancedApi.interceptors.response.use(
-  (response) => {
-    console.log('Advanced API Response:', response.status, response.data)
-    return response
-  },
+  (response) => response,
   (error) => {
-    console.error('Advanced API Error:', error.response?.data || error.message)
+    if (error.code !== 'ERR_CANCELED') {
+      console.error('Advanced API Error:', error.response?.data || error.message)
+    }
     return Promise.reject(error)
   }
 )
