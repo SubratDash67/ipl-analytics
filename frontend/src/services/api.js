@@ -42,19 +42,19 @@ api.interceptors.response.use(
 
 export const apiService = {
   async getDataSummary() {
-    const response = await api.get('/summary')
+    const response = await api.get('/data/summary')  // Fixed: was /summary
     return response.data
   },
 
   async searchPlayers(query, type = 'both') {
-    const response = await api.get('/search', {
+    const response = await api.get('/players/search', {  // Fixed: was /search
       params: { q: query, type }
     })
     return response.data
   },
 
   async getHeadToHeadStats(batter, bowler, filters = {}) {
-    const response = await api.get(`/head-to-head/${encodeURIComponent(batter)}/${encodeURIComponent(bowler)}`, {
+    const response = await api.get(`/stats/head-to-head/${encodeURIComponent(batter)}/${encodeURIComponent(bowler)}`, {  // Fixed: was /head-to-head
       params: filters
     })
     return response.data
@@ -66,7 +66,7 @@ export const apiService = {
   },
 
   async getPlayerStats(playerName, playerType) {
-    const response = await api.get(`/player/${encodeURIComponent(playerName)}`, {
+    const response = await api.get(`/stats/player/${encodeURIComponent(playerName)}`, {  // Fixed: was /player
       params: { type: playerType }
     })
     return response.data
