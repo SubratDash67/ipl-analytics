@@ -4,6 +4,7 @@ from app.services.partnership_service import partnership_service
 from app.services.phase_analysis_service import phase_analysis_service
 from app.services.form_analysis_service import form_analysis_service
 from app.services.win_probability_service import win_probability_service
+from app.services.venue_analysis_service import venue_analysis_service
 
 advanced_api_bp = Blueprint("advanced_api", __name__, url_prefix="/api/advanced")
 logger = logging.getLogger(__name__)
@@ -11,45 +12,113 @@ logger = logging.getLogger(__name__)
 
 @advanced_api_bp.route("/partnerships/<player>", methods=["GET"])
 def get_player_partnerships(player):
-    """Get batting partnerships for a player"""
+    """Get batting partnerships for a player following ICC rules"""
     try:
+        logger.info(f"Partnership request for player: {player}")
+
+        # Decode URL-encoded player name
+        import urllib.parse
+
+        decoded_player = urllib.parse.unquote(player)
+
         filters = {
             "season": request.args.get("season"),
             "venue": request.args.get("venue"),
         }
         filters = {k: v for k, v in filters.items() if v is not None}
 
-        deliveries = partnership_service.get_batting_partnerships(player, filters)
-        partnerships = partnership_service.calculate_partnership_stats(deliveries)
+        logger.info(f"Filters applied: {filters}")
 
-        # Convert to serializable format
-        partnerships_list = []
-        for partnership in partnerships.values():
-            partnerships_list.append(
-                {
-                    "batsman1": partnership.batsman1,
-                    "batsman2": partnership.batsman2,
-                    "runs_scored": partnership.runs_scored,
-                    "balls_faced": partnership.balls_faced,
-                    "partnership_sr": partnership.partnership_sr,
-                    "boundaries": partnership.boundaries,
-                    "dot_balls": partnership.dot_balls,
-                }
-            )
+        partnerships = partnership_service.get_player_partnerships(
+            decoded_player, filters
+        )
 
+        logger.info(
+            f"Partnership response: {len(partnerships.get('partnerships', []))} partnerships found"
+        )
+
+        return jsonify(partnerships), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching partnerships for {player}: {e}")
         return (
             jsonify(
                 {
                     "player": player,
-                    "total_partnerships": len(partnerships_list),
-                    "partnerships": partnerships_list,
+                    "total_partnerships": 0,
+                    "partnerships": [],
+                    "error": str(e),
+                }
+            ),
+            500,
+        )
+
+
+@advanced_api_bp.route("/partnerships/<player>/debug", methods=["GET"])
+def debug_player_partnerships(player):
+    """Debug endpoint to check partnership data"""
+    try:
+        import urllib.parse
+
+        decoded_player = urllib.parse.unquote(player)
+
+        # Check if player exists in deliveries
+        from app.models.database import db_manager
+
+        check_query = """
+            SELECT 
+                COUNT(*) as total_deliveries,
+                COUNT(DISTINCT CASE WHEN batter = ? THEN non_striker END) as unique_partners_as_striker,
+                COUNT(DISTINCT CASE WHEN non_striker = ? THEN batter END) as unique_partners_as_non_striker,
+                COUNT(DISTINCT match_id) as matches_played
+            FROM deliveries 
+            WHERE (batter = ? OR non_striker = ?)
+                AND batter IS NOT NULL 
+                AND non_striker IS NOT NULL
+                AND batter != non_striker
+        """
+
+        debug_result = db_manager.execute_query(
+            check_query,
+            [decoded_player, decoded_player, decoded_player, decoded_player],
+        )
+
+        sample_query = """
+            SELECT 
+                match_id,
+                batter,
+                non_striker,
+                batsman_runs,
+                total_runs,
+                over,
+                ball
+            FROM deliveries 
+            WHERE (batter = ? OR non_striker = ?)
+                AND batter IS NOT NULL 
+                AND non_striker IS NOT NULL
+                AND batter != non_striker
+            ORDER BY match_id, over, ball
+            LIMIT 10
+        """
+
+        sample_data = db_manager.execute_query(
+            sample_query, [decoded_player, decoded_player]
+        )
+
+        return (
+            jsonify(
+                {
+                    "player": decoded_player,
+                    "debug_info": dict(debug_result[0]) if debug_result else {},
+                    "sample_deliveries": [dict(row) for row in sample_data],
+                    "query_executed": True,
                 }
             ),
             200,
         )
 
     except Exception as e:
-        logger.error(f"Error fetching partnerships: {e}")
+        logger.error(f"Debug error for {player}: {e}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -57,36 +126,22 @@ def get_player_partnerships(player):
 def get_phase_analysis(batter, bowler):
     """Get phase-wise analysis (powerplay, middle, death)"""
     try:
+        import urllib.parse
+
+        decoded_batter = urllib.parse.unquote(batter)
+        decoded_bowler = urllib.parse.unquote(bowler)
+
         filters = {
             "season": request.args.get("season"),
             "venue": request.args.get("venue"),
         }
         filters = {k: v for k, v in filters.items() if v is not None}
 
-        powerplay = phase_analysis_service.get_powerplay_analysis(
-            batter, bowler, filters
-        )
-        middle_overs = phase_analysis_service.get_middle_overs_analysis(
-            batter, bowler, filters
-        )
-        death_overs = phase_analysis_service.get_death_overs_analysis(
-            batter, bowler, filters
+        analysis = phase_analysis_service.get_phase_analysis(
+            decoded_batter, decoded_bowler, filters
         )
 
-        return (
-            jsonify(
-                {
-                    "batter": batter,
-                    "bowler": bowler,
-                    "phase_analysis": {
-                        "powerplay": powerplay,
-                        "middle_overs": middle_overs,
-                        "death_overs": death_overs,
-                    },
-                }
-            ),
-            200,
-        )
+        return jsonify(analysis), 200
 
     except Exception as e:
         logger.error(f"Error in phase analysis: {e}")
@@ -97,11 +152,15 @@ def get_phase_analysis(batter, bowler):
 def get_form_analysis(player):
     """Get recent form analysis for a player"""
     try:
+        import urllib.parse
+
+        decoded_player = urllib.parse.unquote(player)
+
         player_type = request.args.get("type", "batter")
         last_n_matches = int(request.args.get("matches", 10))
 
         form_data = form_analysis_service.get_recent_form(
-            player, player_type, last_n_matches
+            decoded_player, player_type, last_n_matches
         )
 
         return jsonify(form_data), 200
@@ -133,53 +192,6 @@ def calculate_win_probability():
 
     except Exception as e:
         logger.error(f"Error calculating win probability: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@advanced_api_bp.route("/pressure-analysis/<batter>/<bowler>", methods=["GET"])
-def get_pressure_analysis(batter, bowler):
-    """Get performance analysis in pressure situations"""
-    try:
-        filters = {
-            "season": request.args.get("season"),
-            "venue": request.args.get("venue"),
-        }
-        filters = {k: v for k, v in filters.items() if v is not None}
-
-        # Get all deliveries for the matchup
-        from app.services.database_service import database_service
-
-        deliveries = database_service.get_head_to_head_deliveries(
-            batter, bowler, filters
-        )
-
-        # Analyze pressure partnerships
-        pressure_partnerships = partnership_service.get_pressure_partnerships(
-            deliveries
-        )
-
-        # Get death overs performance specifically
-        death_overs_analysis = phase_analysis_service.get_death_overs_analysis(
-            batter, bowler, filters
-        )
-
-        return (
-            jsonify(
-                {
-                    "batter": batter,
-                    "bowler": bowler,
-                    "pressure_analysis": {
-                        "pressure_partnerships": len(pressure_partnerships),
-                        "death_overs_performance": death_overs_analysis,
-                        "pressure_situations": pressure_partnerships[:10],
-                    },
-                }
-            ),
-            200,
-        )
-
-    except Exception as e:
-        logger.error(f"Error in pressure analysis: {e}")
         return jsonify({"error": str(e)}), 500
 
 

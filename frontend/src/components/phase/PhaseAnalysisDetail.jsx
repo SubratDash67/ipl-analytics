@@ -1,28 +1,21 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import { Clock, Zap, Target, TrendingUp } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import { advancedApiService } from '../../services/advancedApi'
 import LoadingSpinner from '../common/LoadingSpinner'
 import ErrorMessage from '../common/ErrorMessage'
-import PhaseComparisonChart from './PhaseComparisonChart'
-import PhasePerformanceCards from './PhasePerformanceCards'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 const PhaseAnalysisDetail = ({ batter, bowler, filters = {} }) => {
-  // Memoize the API call to prevent infinite loops
-  const apiCall = useMemo(() => 
-    (signal) => advancedApiService.getPhaseAnalysis(batter, bowler, filters, signal),
-    [batter, bowler, JSON.stringify(filters)]
-  )
-
   const { data: phaseData, loading, error, refetch } = useApi(
-    apiCall,
-    [batter, bowler, JSON.stringify(filters)]
+    ['phase-analysis', batter, bowler, filters],
+    () => advancedApiService.getPhaseAnalysis(batter, bowler, filters)
   )
 
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-96">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="lg" text="Loading phase analysis..." />
       </div>
     )
   }
@@ -36,160 +29,218 @@ const PhaseAnalysisDetail = ({ batter, bowler, filters = {} }) => {
     )
   }
 
-  if (!phaseData) {
+  if (!phaseData || phaseData.error) {
     return (
       <ErrorMessage 
-        message="No phase data received from server" 
+        message={phaseData?.error || "No phase data available"} 
         onRetry={refetch}
+        type="info"
       />
     )
   }
 
-  if (phaseData.error) {
-    return (
-      <ErrorMessage 
-        message={phaseData.error} 
-        onRetry={refetch}
-      />
-    )
-  }
-
-  // Check if phase analysis data exists
-  if (!phaseData.phase_analysis) {
-    return (
-      <div className="card text-center py-8">
-        <Clock className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">No phase analysis data available for {batter} vs {bowler}</p>
-        <button 
-          onClick={refetch}
-          className="mt-4 btn-primary"
-        >
-          Try Again
-        </button>
-      </div>
-    )
-  }
-
-  const phases = [
+  const phases = phaseData.phase_analysis
+  const chartData = [
     {
-      key: 'powerplay',
-      name: 'Powerplay',
-      range: '1-6 Overs',
-      icon: Zap,
-      color: 'blue',
-      description: 'Field restrictions: Only 2 fielders outside 30-yard circle'
+      phase: 'Powerplay (1-6)',
+      runs: phases.powerplay.runs,
+      balls: phases.powerplay.balls,
+      strike_rate: phases.powerplay.strike_rate,
+      boundaries: phases.powerplay.boundaries,
+      color: '#3b82f6'
     },
     {
-      key: 'middle_overs',
-      name: 'Middle Overs',
-      range: '7-15 Overs',
-      icon: Target,
-      color: 'green',
-      description: 'Building phase: Maximum 4 fielders outside circle'
+      phase: 'Middle (7-15)',
+      runs: phases.middle_overs.runs,
+      balls: phases.middle_overs.balls,
+      strike_rate: phases.middle_overs.strike_rate,
+      boundaries: phases.middle_overs.boundaries,
+      color: '#10b981'
     },
     {
-      key: 'death_overs',
-      name: 'Death Overs',
-      range: '16-20 Overs',
-      icon: TrendingUp,
-      color: 'red',
-      description: 'Final assault: Maximum 5 fielders outside circle'
+      phase: 'Death (16-20)',
+      runs: phases.death_overs.runs,
+      balls: phases.death_overs.balls,
+      strike_rate: phases.death_overs.strike_rate,
+      boundaries: phases.death_overs.boundaries,
+      color: '#f59e0b'
     }
   ]
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-medium text-gray-900 mb-2">{label}</p>
+          <div className="space-y-1 text-sm">
+            <p className="text-blue-600">Runs: {data.runs}</p>
+            <p className="text-green-600">Balls: {data.balls}</p>
+            <p className="text-purple-600">Strike Rate: {data.strike_rate}%</p>
+            <p className="text-orange-600">Boundaries: {data.boundaries}</p>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 overflow-hidden">
       <div className="space-y-8">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center">
-            <Clock className="h-6 w-6 text-blue-600 mr-2" />
-            Phase-wise Analysis
+            <Clock className="h-6 w-6 text-green-600 mr-2" />
+            Phase Analysis - {batter} vs {bowler}
           </h2>
           <p className="text-gray-600">
-            {batter} vs {bowler} • Performance across different match phases
+            Performance breakdown across different match phases
           </p>
         </div>
 
-        {/* Phase Performance Cards */}
-        <div className="w-full overflow-hidden">
-          <PhasePerformanceCards phases={phases} phaseData={phaseData.phase_analysis} />
+        {/* Phase Summary Cards */}
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-l-4 border-blue-500">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-blue-900">Powerplay (1-6)</h3>
+              <Zap className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-blue-700">Runs:</span>
+                <span className="font-bold text-blue-900">{phases.powerplay.runs}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-blue-700">Balls:</span>
+                <span className="font-bold text-blue-900">{phases.powerplay.balls}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-blue-700">Strike Rate:</span>
+                <span className="font-bold text-blue-900">{phases.powerplay.strike_rate}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-blue-700">Boundaries:</span>
+                <span className="font-bold text-blue-900">{phases.powerplay.boundaries}</span>
+              </div>
+              {phases.powerplay.dismissals > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-blue-700">Dismissals:</span>
+                  <span className="font-bold text-red-600">{phases.powerplay.dismissals}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card bg-gradient-to-br from-green-50 to-green-100 border-l-4 border-green-500">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-green-900">Middle Overs (7-15)</h3>
+              <Target className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-green-700">Runs:</span>
+                <span className="font-bold text-green-900">{phases.middle_overs.runs}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-700">Balls:</span>
+                <span className="font-bold text-green-900">{phases.middle_overs.balls}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-700">Strike Rate:</span>
+                <span className="font-bold text-green-900">{phases.middle_overs.strike_rate}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-700">Boundaries:</span>
+                <span className="font-bold text-green-900">{phases.middle_overs.boundaries}</span>
+              </div>
+              {phases.middle_overs.dismissals > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-green-700">Dismissals:</span>
+                  <span className="font-bold text-red-600">{phases.middle_overs.dismissals}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card bg-gradient-to-br from-orange-50 to-orange-100 border-l-4 border-orange-500">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-orange-900">Death Overs (16-20)</h3>
+              <TrendingUp className="h-6 w-6 text-orange-600" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-orange-700">Runs:</span>
+                <span className="font-bold text-orange-900">{phases.death_overs.runs}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-orange-700">Balls:</span>
+                <span className="font-bold text-orange-900">{phases.death_overs.balls}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-orange-700">Strike Rate:</span>
+                <span className="font-bold text-orange-900">{phases.death_overs.strike_rate}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-orange-700">Boundaries:</span>
+                <span className="font-bold text-orange-900">{phases.death_overs.boundaries}</span>
+              </div>
+              {phases.death_overs.dismissals > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-orange-700">Dismissals:</span>
+                  <span className="font-bold text-red-600">{phases.death_overs.dismissals}</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Phase Comparison Chart */}
-        <div className="w-full overflow-hidden">
-          <PhaseComparisonChart phases={phases} phaseData={phaseData.phase_analysis} />
+        <div className="card">
+          <h3 className="text-xl font-semibold text-gray-900 mb-6">Phase Comparison</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="phase" 
+                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="runs" name="Runs">
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* Detailed Phase Breakdown */}
-        <div className="grid lg:grid-cols-3 gap-6 w-full">
-          {phases.map(phase => {
-            const data = phaseData.phase_analysis[phase.key]
-            const stats = data?.stats || {}
-            
-            return (
-              <div key={phase.key} className="card w-full">
-                <div className="flex items-center mb-4">
-                  <phase.icon className={`h-6 w-6 text-${phase.color}-600 mr-2`} />
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{phase.name}</h3>
-                    <p className="text-sm text-gray-600">{phase.range}</p>
-                  </div>
-                </div>
-                
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-600">{phase.description}</p>
-                </div>
-
-                {data && data.total_deliveries > 0 ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-2 bg-blue-50 rounded">
-                        <div className="text-lg font-bold text-blue-600">{stats.runs_scored || 0}</div>
-                        <div className="text-xs text-gray-600">Runs</div>
-                      </div>
-                      <div className="text-center p-2 bg-green-50 rounded">
-                        <div className="text-lg font-bold text-green-600">
-                          {stats.strike_rate ? `${stats.strike_rate.toFixed(1)}%` : '0%'}
-                        </div>
-                        <div className="text-xs text-gray-600">Strike Rate</div>
-                      </div>
-                      <div className="text-center p-2 bg-purple-50 rounded">
-                        <div className="text-lg font-bold text-purple-600">{stats.boundaries || 0}</div>
-                        <div className="text-xs text-gray-600">Boundaries</div>
-                      </div>
-                      <div className="text-center p-2 bg-orange-50 rounded">
-                        <div className="text-lg font-bold text-orange-600">
-                          {stats.run_rate ? stats.run_rate.toFixed(1) : '0.0'}
-                        </div>
-                        <div className="text-xs text-gray-600">Run Rate</div>
-                      </div>
-                    </div>
-                    
-                    <div className="pt-3 border-t border-gray-200">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Balls Faced:</span>
-                        <span className="font-medium">{stats.balls_faced || 0}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Dot Ball %:</span>
-                        <span className="font-medium text-red-600">
-                          {stats.dot_ball_percentage ? `${stats.dot_ball_percentage.toFixed(1)}%` : '0%'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Wickets:</span>
-                        <span className="font-medium">{stats.wickets_lost || 0}</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-6 text-gray-500">
-                    <p>No data available for this phase</p>
-                  </div>
-                )}
-              </div>
-            )
-          })}
+        {/* Phase Insights */}
+        <div className="card bg-gradient-to-r from-blue-50 to-purple-50">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Phase Insights</h3>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Best Phase</h4>
+              <p className="text-gray-600 text-sm">
+                {chartData.reduce((best, current) => 
+                  current.strike_rate > best.strike_rate ? current : best
+                ).phase} with {Math.max(...chartData.map(p => p.strike_rate))}% strike rate
+              </p>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Most Productive</h4>
+              <p className="text-gray-600 text-sm">
+                {chartData.reduce((best, current) => 
+                  current.runs > best.runs ? current : best
+                ).phase} with {Math.max(...chartData.map(p => p.runs))} runs scored
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

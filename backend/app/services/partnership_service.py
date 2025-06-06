@@ -1,123 +1,191 @@
-from typing import List, Dict, Any, Optional, Tuple
-from dataclasses import dataclass
 import logging
+from typing import Dict, List, Any
 from app.models.database import db_manager
-from app.config.settings import Config
 
-@dataclass
-class PartnershipStats:
-    partnership_id: str
-    batsman1: str
-    batsman2: str
-    runs_scored: int = 0
-    balls_faced: int = 0
-    partnership_sr: float = 0.0
-    boundaries: int = 0
-    dot_balls: int = 0
-    highest_partnership: int = 0
-    dismissals: int = 0
-    not_outs: int = 0
-    partnerships_count: int = 0
 
 class PartnershipService:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.dismissal_types_credit = Config.DISMISSAL_TYPES_BOWLER_CREDIT
 
-    def get_batting_partnerships(self, player: str, filters: Optional[Dict[str, Any]] = None) -> List[Dict]:
-        """Get all batting partnerships for a specific player following ICC partnership rules [4]"""
+    def get_player_partnerships(
+        self, player: str, filters: Dict = None
+    ) -> Dict[str, Any]:
+        """
+        Get batting partnerships for a specific player following ICC partnership rules:
+        - Partnership = collaboration between two batters and runs they accumulate together
+        - Includes extras in partnership runs
+        - Partnership ends when one batter is dismissed, retires, or innings concludes
+        """
         try:
-            base_query = '''
-                SELECT d.*, m.season, m.venue, m.date, m.winner, m.match_type
-                FROM deliveries d
-                JOIN matches m ON d.match_id = m.id
-                WHERE (d.batter = ? OR d.non_striker = ?)
-            '''
+            # Step 1: Find all partnership segments where player was involved
+            partnership_query = """
+                WITH partnership_segments AS (
+                    SELECT 
+                        d.match_id,
+                        d.inning,
+                        d.batter as striker,
+                        d.non_striker,
+                        d.batsman_runs,
+                        d.extras_type,
+                        d.extra_runs,
+                        d.total_runs,
+                        d.is_wicket,
+                        d.player_dismissed,
+                        d.over,
+                        d.ball,
+                        m.season,
+                        m.venue,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY d.match_id, d.inning 
+                            ORDER BY d.over, d.ball
+                        ) as ball_sequence
+                    FROM deliveries d
+                    JOIN matches m ON d.match_id = m.id
+                    WHERE (d.batter = ? OR d.non_striker = ?)
+                        AND d.batter IS NOT NULL 
+                        AND d.non_striker IS NOT NULL
+                        AND d.batter != d.non_striker
+            """
+
             params = [player, player]
-            
+
             if filters:
-                if filters.get('season'):
-                    base_query += ' AND m.season = ?'
-                    params.append(filters['season'])
-                if filters.get('venue'):
-                    base_query += ' AND m.venue = ?'
-                    params.append(filters['venue'])
-            
-            base_query += ' ORDER BY m.date, d.match_id, d.inning, d.over, d.ball'
-            
-            results = db_manager.execute_query(base_query, params)
-            return [dict(row) for row in results]
-            
-        except Exception as e:
-            self.logger.error(f"Error fetching partnerships: {e}")
-            return []
+                if filters.get("season"):
+                    partnership_query += " AND m.season = ?"
+                    params.append(filters["season"])
+                if filters.get("venue"):
+                    partnership_query += " AND m.venue = ?"
+                    params.append(filters["venue"])
 
-    def calculate_partnership_stats(self, deliveries: List[Dict]) -> Dict[str, PartnershipStats]:
-        """Calculate partnership statistics following ICC standards [3]"""
-        partnerships = {}
-        current_partnership = {}
-        
-        for delivery in deliveries:
-            match_key = f"{delivery['match_id']}_{delivery['inning']}"
-            batsmen_key = tuple(sorted([delivery['batter'], delivery['non_striker']]))
-            partnership_key = f"{batsmen_key[0]}_{batsmen_key[1]}"
-            
-            if partnership_key not in partnerships:
-                partnerships[partnership_key] = PartnershipStats(
-                    partnership_id=partnership_key,
-                    batsman1=batsmen_key[0],
-                    batsman2=batsmen_key[1]
+            partnership_query += """
+                ),
+                partnership_breaks AS (
+                    SELECT 
+                        match_id,
+                        inning,
+                        ball_sequence,
+                        striker,
+                        non_striker,
+                        CASE 
+                            WHEN is_wicket = 1 AND (player_dismissed = striker OR player_dismissed = non_striker)
+                            THEN 1 
+                            ELSE 0 
+                        END as partnership_ends,
+                        LAG(CASE 
+                            WHEN is_wicket = 1 AND (player_dismissed = striker OR player_dismissed = non_striker)
+                            THEN 1 
+                            ELSE 0 
+                        END, 1, 0) OVER (
+                            PARTITION BY match_id, inning 
+                            ORDER BY ball_sequence
+                        ) as prev_partnership_ended
+                    FROM partnership_segments
+                ),
+                partnership_groups AS (
+                    SELECT 
+                        *,
+                        SUM(partnership_ends) OVER (
+                            PARTITION BY match_id, inning 
+                            ORDER BY ball_sequence 
+                            ROWS UNBOUNDED PRECEDING
+                        ) as partnership_group
+                    FROM partnership_breaks
+                ),
+                partnership_stats AS (
+                    SELECT 
+                        ps.match_id,
+                        ps.inning,
+                        pg.partnership_group,
+                        CASE 
+                            WHEN ps.striker = ? THEN ps.non_striker
+                            WHEN ps.non_striker = ? THEN ps.striker
+                            ELSE NULL
+                        END as partner,
+                        -- Total partnership runs including extras (ICC rule)
+                        SUM(ps.total_runs) as partnership_runs,
+                        -- Individual player runs in this partnership
+                        SUM(CASE WHEN ps.striker = ? THEN ps.batsman_runs ELSE 0 END) as player_runs,
+                        -- Partner runs in this partnership  
+                        SUM(CASE WHEN ps.striker != ? THEN ps.batsman_runs ELSE 0 END) as partner_runs,
+                        -- Balls faced together
+                        COUNT(CASE WHEN ps.extras_type IS NULL OR ps.extras_type != 'wides' THEN 1 END) as balls_faced,
+                        -- Boundaries hit by player
+                        COUNT(CASE WHEN ps.striker = ? AND ps.batsman_runs IN (4, 6) THEN 1 END) as player_boundaries,
+                        -- Dot balls in partnership
+                        COUNT(CASE WHEN ps.total_runs = 0 THEN 1 END) as dot_balls,
+                        -- Partnership duration
+                        COUNT(*) as total_balls
+                    FROM partnership_segments ps
+                    JOIN partnership_groups pg ON ps.match_id = pg.match_id 
+                        AND ps.inning = pg.inning 
+                        AND ps.ball_sequence = pg.ball_sequence
+                    WHERE (ps.striker = ? OR ps.non_striker = ?)
+                    GROUP BY ps.match_id, ps.inning, pg.partnership_group, partner
+                    HAVING partner IS NOT NULL 
+                        AND partner != ''
+                        AND balls_faced >= 6  -- Minimum 6 balls for meaningful partnership
+                        AND partnership_runs > 0
                 )
-            
-            partnership = partnerships[partnership_key]
-            
-            # Track partnership runs and balls according to ICC rules [3]
-            if delivery['extras_type'] != 'wides':
-                partnership.balls_faced += 1
-            
-            partnership.runs_scored += delivery['batsman_runs'] or 0
-            
-            if delivery['batsman_runs'] in [4, 6]:
-                partnership.boundaries += 1
-            
-            if delivery['total_runs'] == 0:
-                partnership.dot_balls += 1
-            
-            # Track dismissals in partnership
-            if (delivery['is_wicket'] and 
-                delivery['player_dismissed'] in [delivery['batter'], delivery['non_striker']]):
-                partnership.dismissals += 1
-        
-        # Calculate derived statistics
-        for partnership in partnerships.values():
-            if partnership.balls_faced > 0:
-                partnership.partnership_sr = round((partnership.runs_scored / partnership.balls_faced) * 100, 2)
-            partnership.partnerships_count = 1
-        
-        return partnerships
+                SELECT 
+                    ? as batsman1,
+                    partner as batsman2,
+                    SUM(partnership_runs) as runs_scored,
+                    SUM(balls_faced) as balls_faced,
+                    ROUND((SUM(partnership_runs) * 100.0 / NULLIF(SUM(balls_faced), 0)), 2) as partnership_sr,
+                    SUM(player_boundaries) as boundaries,
+                    SUM(dot_balls) as dot_balls,
+                    COUNT(*) as partnership_instances
+                FROM partnership_stats
+                GROUP BY partner
+                ORDER BY runs_scored DESC
+                LIMIT 20
+            """
 
-    def get_pressure_partnerships(self, deliveries: List[Dict]) -> List[Dict]:
-        """Analyze partnerships under pressure situations [8][9]"""
-        pressure_partnerships = []
-        
-        for delivery in deliveries:
-            # Define pressure situations: death overs, low scoring rate, wickets falling
-            is_death_over = delivery['over'] >= 15  # Death overs in T20 [5]
-            
-            # High required run rate scenarios (>10 RPO)
-            is_pressure = is_death_over
-            
-            if is_pressure:
-                partnership_data = {
-                    'match_id': delivery['match_id'],
-                    'batsman1': delivery['batter'],
-                    'batsman2': delivery['non_striker'],
-                    'over': delivery['over'],
-                    'runs': delivery['batsman_runs'],
-                    'situation': 'death_overs' if is_death_over else 'pressure'
-                }
-                pressure_partnerships.append(partnership_data)
-        
-        return pressure_partnerships
+            # Add all player parameters
+            params.extend(
+                [player, player, player, player, player, player, player, player]
+            )
+
+            results = db_manager.execute_query(partnership_query, params)
+
+            partnerships = []
+            for row in results:
+                if (
+                    row["batsman2"]
+                    and row["batsman2"].strip()
+                    and row["runs_scored"] > 0
+                ):
+                    partnerships.append(
+                        {
+                            "batsman1": row["batsman1"],
+                            "batsman2": row["batsman2"],
+                            "runs_scored": int(row["runs_scored"] or 0),
+                            "balls_faced": int(row["balls_faced"] or 0),
+                            "partnership_sr": float(row["partnership_sr"] or 0.0),
+                            "boundaries": int(row["boundaries"] or 0),
+                            "dot_balls": int(row["dot_balls"] or 0),
+                            "partnership_instances": int(
+                                row["partnership_instances"] or 0
+                            ),
+                        }
+                    )
+
+            self.logger.info(f"Found {len(partnerships)} partnerships for {player}")
+
+            return {
+                "player": player,
+                "total_partnerships": len(partnerships),
+                "partnerships": partnerships,
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error getting partnerships for {player}: {e}")
+            return {
+                "player": player,
+                "total_partnerships": 0,
+                "partnerships": [],
+                "error": str(e),
+            }
+
 
 partnership_service = PartnershipService()

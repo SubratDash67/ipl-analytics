@@ -27,7 +27,6 @@ const PartnershipTable = ({ partnerships, selectedPlayer, sortBy, sortOrder, onS
     } else if (partnership.batsman2 === selectedPlayer) {
       return partnership.batsman1
     } else {
-      // Fallback for name variations
       const player1Lower = partnership.batsman1?.toLowerCase() || ''
       const player2Lower = partnership.batsman2?.toLowerCase() || ''
       const selectedLower = selectedPlayer?.toLowerCase() || ''
@@ -84,7 +83,7 @@ const PartnershipTable = ({ partnerships, selectedPlayer, sortBy, sortOrder, onS
                     {partnership.balls_faced}
                   </td>
                   <td className="py-3 px-4 text-right font-medium text-green-600">
-                    {partnership.partnership_sr || partnership.strike_rate}%
+                    {partnership.partnership_sr}%
                   </td>
                   <td className="py-3 px-4 text-right font-medium text-purple-600">
                     {partnership.boundaries}

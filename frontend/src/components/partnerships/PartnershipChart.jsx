@@ -23,7 +23,7 @@ const PartnershipChart = ({ partnerships, selectedPlayer }) => {
             </div>
             <div>
               <span className="text-gray-600">SR:</span>
-              <span className="ml-1 font-medium text-green-600">{data.partnership_sr || data.strike_rate}%</span>
+              <span className="ml-1 font-medium text-green-600">{data.partnership_sr}%</span>
             </div>
             <div>
               <span className="text-gray-600">Boundaries:</span>
@@ -36,18 +36,14 @@ const PartnershipChart = ({ partnerships, selectedPlayer }) => {
     return null
   }
 
-  // Fix the partner logic to correctly identify the other batsman
   const chartData = partnerships.map((partnership, index) => {
     let partner = ''
     
-    // Determine who is the partner (not the selected player)
     if (partnership.batsman1 === selectedPlayer) {
       partner = partnership.batsman2
     } else if (partnership.batsman2 === selectedPlayer) {
       partner = partnership.batsman1
     } else {
-      // Fallback: if neither matches exactly, use the one that's not the selected player
-      // This handles cases where names might have slight variations
       const player1Lower = partnership.batsman1?.toLowerCase() || ''
       const player2Lower = partnership.batsman2?.toLowerCase() || ''
       const selectedLower = selectedPlayer?.toLowerCase() || ''
@@ -66,7 +62,6 @@ const PartnershipChart = ({ partnerships, selectedPlayer }) => {
     }
   })
 
-  // Filter out any partnerships where partner is the same as selected player
   const validChartData = chartData.filter(item => 
     item.partner !== selectedPlayer && 
     item.partner !== 'Unknown Partner' &&

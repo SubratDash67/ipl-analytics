@@ -1,160 +1,110 @@
-from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
 import logging
+from typing import Dict, List, Any
 from app.models.database import db_manager
-
-
-@dataclass
-class PhaseStats:
-    phase_name: str
-    overs_range: str
-    runs_scored: int = 0
-    balls_faced: int = 0
-    wickets_lost: int = 0
-    boundaries: int = 0
-    strike_rate: float = 0.0
-    run_rate: float = 0.0
-    dot_ball_percentage: float = 0.0
-    boundary_percentage: float = 0.0
 
 
 class PhaseAnalysisService:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    def get_powerplay_analysis(
-        self, batter: str, bowler: str, filters: Optional[Dict] = None
-    ) -> Dict:
-        """Analyze powerplay performance following ICC powerplay rules [6]"""
+    def get_phase_analysis(
+        self, batter: str, bowler: str, filters: Dict = None
+    ) -> Dict[str, Any]:
+        """Get phase-wise analysis for batter vs bowler"""
         try:
-            # Powerplay: Overs 1-6 in T20, only 2 fielders outside 30-yard circle
-            powerplay_deliveries = self._get_phase_deliveries(
-                batter, bowler, 0, 5, filters
-            )
-            return self._calculate_phase_stats(powerplay_deliveries, "Powerplay", "1-6")
+            powerplay = self._get_phase_stats(batter, bowler, 1, 6, filters)
+            middle_overs = self._get_phase_stats(batter, bowler, 7, 15, filters)
+            death_overs = self._get_phase_stats(batter, bowler, 16, 20, filters)
+
+            return {
+                "batter": batter,
+                "bowler": bowler,
+                "phase_analysis": {
+                    "powerplay": powerplay,
+                    "middle_overs": middle_overs,
+                    "death_overs": death_overs,
+                },
+            }
 
         except Exception as e:
-            self.logger.error(f"Error analyzing powerplay: {e}")
-            return {}
+            self.logger.error(f"Error in phase analysis: {e}")
+            return {"error": str(e)}
 
-    def get_middle_overs_analysis(
-        self, batter: str, bowler: str, filters: Optional[Dict] = None
-    ) -> Dict:
-        """Analyze middle overs performance [6]"""
-        try:
-            # Middle overs: 7-15 in T20
-            middle_deliveries = self._get_phase_deliveries(
-                batter, bowler, 6, 14, filters
-            )
-            return self._calculate_phase_stats(
-                middle_deliveries, "Middle Overs", "7-15"
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error analyzing middle overs: {e}")
-            return {}
-
-    def get_death_overs_analysis(
-        self, batter: str, bowler: str, filters: Optional[Dict] = None
-    ) -> Dict:
-        """Analyze death overs performance following ICC standards [5]"""
-        try:
-            # Death overs: 16-20 in T20, maximum 5 fielders outside circle
-            death_deliveries = self._get_phase_deliveries(
-                batter, bowler, 15, 19, filters
-            )
-            return self._calculate_phase_stats(death_deliveries, "Death Overs", "16-20")
-
-        except Exception as e:
-            self.logger.error(f"Error analyzing death overs: {e}")
-            return {}
-
-    def _get_phase_deliveries(
+    def _get_phase_stats(
         self,
         batter: str,
         bowler: str,
         start_over: int,
         end_over: int,
-        filters: Optional[Dict] = None,
-    ) -> List[Dict]:
-        """Get deliveries for specific phase"""
-        base_query = """
-            SELECT d.*, m.season, m.venue, m.date, m.winner
-            FROM deliveries d
-            JOIN matches m ON d.match_id = m.id
-            WHERE d.batter = ? AND d.bowler = ? AND d.over >= ? AND d.over <= ?
-        """
-        params = [batter, bowler, start_over, end_over]
+        filters: Dict = None,
+    ) -> Dict[str, Any]:
+        """Get statistics for a specific phase"""
+        try:
+            base_query = """
+                SELECT 
+                    SUM(d.batsman_runs) as runs,
+                    COUNT(CASE WHEN d.extras_type IS NULL OR d.extras_type != 'wides' THEN 1 END) as balls,
+                    COUNT(CASE WHEN d.batsman_runs IN (4, 6) THEN 1 END) as boundaries,
+                    COUNT(CASE WHEN d.is_wicket = 1 AND d.player_dismissed = d.batter THEN 1 END) as dismissals,
+                    COUNT(CASE WHEN d.total_runs = 0 THEN 1 END) as dot_balls
+                FROM deliveries d
+                JOIN matches m ON d.match_id = m.id
+                WHERE d.batter = ? 
+                    AND d.bowler = ?
+                    AND d.over BETWEEN ? AND ?
+            """
 
-        if filters:
-            if filters.get("season"):
-                base_query += " AND m.season = ?"
-                params.append(filters["season"])
-            if filters.get("venue"):
-                base_query += " AND m.venue = ?"
-                params.append(filters["venue"])
+            params = [batter, bowler, start_over, end_over]
 
-        base_query += " ORDER BY m.date, d.over, d.ball"
+            if filters:
+                if filters.get("season"):
+                    base_query += " AND m.season = ?"
+                    params.append(filters["season"])
+                if filters.get("venue"):
+                    base_query += " AND m.venue = ?"
+                    params.append(filters["venue"])
 
-        results = db_manager.execute_query(base_query, params)
-        return [dict(row) for row in results]
+            results = db_manager.execute_query(base_query, params)
 
-    def _calculate_phase_stats(
-        self, deliveries: List[Dict], phase_name: str, overs_range: str
-    ) -> Dict:
-        """Calculate phase statistics following ICC calculation rules [3]"""
-        if not deliveries:
+            if not results:
+                return {
+                    "runs": 0,
+                    "balls": 0,
+                    "strike_rate": 0.0,
+                    "boundaries": 0,
+                    "dismissals": 0,
+                    "dot_balls": 0,
+                }
+
+            row = results[0]
+            runs = row["runs"] or 0
+            balls = row["balls"] or 0
+            boundaries = row["boundaries"] or 0
+            dismissals = row["dismissals"] or 0
+            dot_balls = row["dot_balls"] or 0
+
+            # Correct strike rate calculation: (runs/balls) * 100
+            strike_rate = (runs / balls * 100) if balls > 0 else 0.0
+
             return {
-                "phase_name": phase_name,
-                "overs_range": overs_range,
-                "stats": PhaseStats(phase_name, overs_range).__dict__,
+                "runs": runs,
+                "balls": balls,
+                "strike_rate": round(strike_rate, 2),
+                "boundaries": boundaries,
+                "dismissals": dismissals,
+                "dot_balls": dot_balls,
             }
 
-        stats = PhaseStats(phase_name, overs_range)
-        dot_balls = 0
-
-        for delivery in deliveries:
-            # Count balls faced (exclude wides) [3]
-            if delivery["extras_type"] != "wides":
-                stats.balls_faced += 1
-
-                if delivery["total_runs"] == 0:
-                    dot_balls += 1
-
-            # Count runs scored by batsman
-            stats.runs_scored += delivery["batsman_runs"] or 0
-
-            # Count boundaries
-            if delivery["batsman_runs"] in [4, 6]:
-                stats.boundaries += 1
-
-            # Count wickets
-            if (
-                delivery["is_wicket"]
-                and delivery["player_dismissed"] == delivery["batter"]
-            ):
-                stats.wickets_lost += 1
-
-        # Calculate derived statistics
-        if stats.balls_faced > 0:
-            stats.strike_rate = round((stats.runs_scored / stats.balls_faced) * 100, 2)
-            stats.dot_ball_percentage = round((dot_balls / stats.balls_faced) * 100, 2)
-            stats.boundary_percentage = round(
-                (stats.boundaries / stats.balls_faced) * 100, 2
-            )
-
-            # Calculate run rate (runs per over)
-            overs_played = stats.balls_faced / 6.0
-            stats.run_rate = (
-                round(stats.runs_scored / overs_played, 2) if overs_played > 0 else 0
-            )
-
-        return {
-            "phase_name": phase_name,
-            "overs_range": overs_range,
-            "total_deliveries": len(deliveries),
-            "stats": stats.__dict__,
-        }
+        except Exception as e:
+            self.logger.error(f"Error getting phase stats: {e}")
+            return {
+                "runs": 0,
+                "balls": 0,
+                "strike_rate": 0.0,
+                "boundaries": 0,
+                "dismissals": 0,
+                "dot_balls": 0,
+            }
 
 
 phase_analysis_service = PhaseAnalysisService()

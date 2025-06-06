@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 import logging
 from app.services.database_service import database_service
+from app.services.venue_analysis_service import venue_analysis_service
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 logger = logging.getLogger(__name__)
@@ -15,7 +16,6 @@ def health_check():
                 "status": "IPL Analytics API is running",
                 "timestamp": datetime.now().isoformat(),
                 "version": "2.0.0",
-                "local": True,
             }
         ),
         200,
@@ -60,7 +60,6 @@ def get_head_to_head_stats(batter, bowler):
             "venue": request.args.get("venue"),
             "match_type": request.args.get("match_type"),
         }
-        # Remove None values
         filters = {k: v for k, v in filters.items() if v is not None}
 
         stats = database_service.get_head_to_head_stats(batter, bowler, filters)
@@ -106,6 +105,48 @@ def get_player_matchups(player):
 
     except Exception as e:
         logger.error(f"Error getting player matchups: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/venues", methods=["GET"])
+def get_venues():
+    """Get all venues"""
+    try:
+        venues = database_service.get_venues()
+        return jsonify({"venues": venues}), 200
+
+    except Exception as e:
+        logger.error(f"Error getting venues: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/venue-breakdown/<batter>/<bowler>", methods=["GET"])
+def get_venue_breakdown_route(batter, bowler):
+    """Get venue breakdown for batter vs bowler"""
+    try:
+        filters = {"season": request.args.get("season")}
+        filters = {k: v for k, v in filters.items() if v is not None}
+
+        breakdown = venue_analysis_service.get_venue_breakdown(batter, bowler, filters)
+        return jsonify(breakdown), 200
+
+    except Exception as e:
+        logger.error(f"Error getting venue breakdown: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/season-trends/<batter>/<bowler>", methods=["GET"])
+def get_season_trends_route(batter, bowler):
+    """Get season trends for batter vs bowler"""
+    try:
+        filters = {"venue": request.args.get("venue")}
+        filters = {k: v for k, v in filters.items() if v is not None}
+
+        trends = venue_analysis_service.get_season_trends(batter, bowler, filters)
+        return jsonify(trends), 200
+
+    except Exception as e:
+        logger.error(f"Error getting season trends: {e}")
         return jsonify({"error": str(e)}), 500
 
 

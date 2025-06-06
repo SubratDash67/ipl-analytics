@@ -134,7 +134,7 @@ class DataLoader:
             self.logger.error(f"Error creating database tables: {e}")
             return False
 
-    def load_data_to_database(self):
+    def load_all_data(self):
         """Load CSV data into SQLite database"""
         try:
             matches_df, deliveries_df = self.load_csv_data()
@@ -147,14 +147,23 @@ class DataLoader:
             if not self.create_database_tables():
                 return False
 
-            # Load data into database
+            # Check if data already exists
             conn = sqlite3.connect(self.database_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM matches")
+            existing_matches = cursor.fetchone()[0]
 
-            # Load matches
+            if existing_matches > 0:
+                self.logger.info(
+                    f"Database already contains {existing_matches} matches. Skipping data load."
+                )
+                conn.close()
+                return True
+
+            # Load data into database
             matches_df.to_sql("matches", conn, if_exists="replace", index=False)
             self.logger.info(f"Loaded {len(matches_df)} matches into database")
 
-            # Load deliveries
             deliveries_df.to_sql("deliveries", conn, if_exists="replace", index=False)
             self.logger.info(f"Loaded {len(deliveries_df)} deliveries into database")
 

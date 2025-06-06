@@ -1,32 +1,45 @@
-import sys
 import logging
-from pathlib import Path
-from app.services.data_loader import data_loader
-from app.models.database import db_manager
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 
 def setup_database():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-
-    logger = logging.getLogger(__name__)
-
+    """Setup database with tables and initial data"""
     try:
         logger.info("Starting database setup...")
 
+        # Import after environment is loaded
+        from app.models.database import db_manager
+        from app.services.data_loader import data_loader
+
+        # Create database tables
         logger.info("Creating database tables...")
         db_manager.create_tables()
 
+        # Load data from CSV files
         logger.info("Loading data from CSV files...")
-        matches_count, deliveries_count = data_loader.load_all_data()
+        success = data_loader.load_all_data()
 
-        logger.info("Generating data summary...")
-        summary = data_loader.get_data_summary()
+        if success:
+            logger.info("Database setup completed successfully!")
 
-        logger.info("Database setup completed successfully!")
-        logger.info(f"Summary: {summary}")
+            # Show summary
+            stats = data_loader.get_database_stats()
+            logger.info(f"Database statistics: {stats}")
+
+        else:
+            logger.error("Failed to load data into database")
+            return False
 
         return True
 
@@ -37,13 +50,8 @@ def setup_database():
 
 if __name__ == "__main__":
     success = setup_database()
-    if not success:
-        sys.exit(1)
-
-    print("\n" + "=" * 50)
-    print("DATABASE SETUP COMPLETED SUCCESSFULLY!")
-    print("=" * 50)
-    print("Next steps:")
-    print("1. Run: python run.py")
-    print("2. API will be available at: http://localhost:5000")
-    print("3. Test endpoint: http://localhost:5000/api/health")
+    if success:
+        print("✅ Database setup completed successfully!")
+    else:
+        print("❌ Database setup failed!")
+        exit(1)

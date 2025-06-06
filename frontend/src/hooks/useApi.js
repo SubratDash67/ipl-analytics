@@ -1,14 +1,84 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 
-export function useApi(apiCall, dependencies = [], options = {}) {
+// Custom hook for API calls with React Query
+export function useApi(queryKey, queryFn, options = {}) {
+  const {
+    enabled = true,
+    staleTime = 1000 * 60 * 5, // 5 minutes
+    cacheTime = 1000 * 60 * 10, // 10 minutes
+    retry = 3,
+    onSuccess,
+    onError,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: Array.isArray(queryKey) ? queryKey : [queryKey],
+    queryFn,
+    enabled,
+    staleTime,
+    cacheTime,
+    retry,
+    onSuccess,
+    onError: (error) => {
+      console.error('API Error:', error)
+      if (onError) {
+        onError(error)
+      } else {
+        toast.error(error.response?.data?.message || error.message || 'An error occurred')
+      }
+    },
+    ...restOptions
+  })
+}
+
+// Custom hook for mutations
+export function useApiMutation(mutationFn, options = {}) {
+  const queryClient = useQueryClient()
+  const {
+    onSuccess,
+    onError,
+    invalidateQueries = [],
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn,
+    onSuccess: (data, variables, context) => {
+      // Invalidate related queries
+      if (invalidateQueries.length > 0) {
+        invalidateQueries.forEach(queryKey => {
+          queryClient.invalidateQueries(queryKey)
+        })
+      }
+      
+      if (onSuccess) {
+        onSuccess(data, variables, context)
+      }
+    },
+    onError: (error, variables, context) => {
+      console.error('Mutation Error:', error)
+      if (onError) {
+        onError(error, variables, context)
+      } else {
+        toast.error(error.response?.data?.message || error.message || 'An error occurred')
+      }
+    },
+    ...restOptions
+  })
+}
+
+// Legacy useApi hook for backward compatibility
+export function useApiLegacy(apiCall, dependencies = [], options = {}) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const abortControllerRef = useRef(null)
   const mountedRef = useRef(true)
 
-  const { showErrorToast = false, initialData = null } = options
+  const { showErrorToast = true, initialData = null } = options
 
   useEffect(() => {
     mountedRef.current = true
@@ -26,32 +96,25 @@ export function useApi(apiCall, dependencies = [], options = {}) {
 
     const fetchData = async () => {
       try {
-        // Cancel previous request
         if (abortControllerRef.current) {
           abortControllerRef.current.abort()
         }
 
-        // Create new abort controller
         abortControllerRef.current = new AbortController()
-        
+
         setLoading(true)
         setError(null)
-        
-        console.log('Making API call...', { dependencies })
+
         const result = await apiCall(abortControllerRef.current.signal)
-        console.log('API call result:', result)
-        
+
         if (mountedRef.current) {
           setData(result)
         }
       } catch (err) {
-        console.error('API call error:', err)
-        
         if (err.name === 'AbortError') {
-          console.log('Request was aborted')
           return
         }
-        
+
         if (mountedRef.current) {
           setError(err)
           if (showErrorToast) {
@@ -67,7 +130,6 @@ export function useApi(apiCall, dependencies = [], options = {}) {
 
     fetchData()
 
-    // Cleanup function
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
@@ -75,7 +137,7 @@ export function useApi(apiCall, dependencies = [], options = {}) {
     }
   }, dependencies)
 
-  const refetch = async () => {
+  const refetch = useCallback(async () => {
     try {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
@@ -84,22 +146,18 @@ export function useApi(apiCall, dependencies = [], options = {}) {
       abortControllerRef.current = new AbortController()
       setLoading(true)
       setError(null)
-      
-      console.log('Refetching data...')
+
       const result = await apiCall(abortControllerRef.current.signal)
-      console.log('Refetch result:', result)
-      
+
       if (mountedRef.current) {
         setData(result)
       }
       return result
     } catch (err) {
-      console.error('Refetch error:', err)
-      
       if (err.name === 'AbortError') {
         return
       }
-      
+
       if (mountedRef.current) {
         setError(err)
         if (showErrorToast) {
@@ -112,11 +170,12 @@ export function useApi(apiCall, dependencies = [], options = {}) {
         setLoading(false)
       }
     }
-  }
+  }, [apiCall, showErrorToast])
 
   return { data, loading, error, refetch }
 }
 
+// Player search hook
 export function usePlayerSearch(query, type = 'both') {
   const [results, setResults] = useState({ batters: [], bowlers: [] })
   const [loading, setLoading] = useState(false)
@@ -145,7 +204,7 @@ export function usePlayerSearch(query, type = 'both') {
         abortControllerRef.current = new AbortController()
         setLoading(true)
         setError(null)
-        
+
         const { apiService } = await import('../services/api')
         const data = await apiService.searchPlayers(query, type, abortControllerRef.current.signal)
         setResults(data)
@@ -170,4 +229,46 @@ export function usePlayerSearch(query, type = 'both') {
   }, [query, type])
 
   return { results, loading, error }
+}
+
+// Debounced value hook
+export function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
+
+// Local storage hook
+export function useLocalStorage(key, initialValue) {
+  const [storedValue, setStoredValue] = useState(() => {
+    try {
+      const item = window.localStorage.getItem(key)
+      return item ? JSON.parse(item) : initialValue
+    } catch (error) {
+      console.error(`Error reading localStorage key "${key}":`, error)
+      return initialValue
+    }
+  })
+
+  const setValue = useCallback((value) => {
+    try {
+      const valueToStore = value instanceof Function ? value(storedValue) : value
+      setStoredValue(valueToStore)
+      window.localStorage.setItem(key, JSON.stringify(valueToStore))
+    } catch (error) {
+      console.error(`Error setting localStorage key "${key}":`, error)
+    }
+  }, [key, storedValue])
+
+  return [storedValue, setValue]
 }

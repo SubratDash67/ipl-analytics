@@ -17,8 +17,8 @@ const FormAnalysis = ({ player, playerType = 'batter' }) => {
   )
 
   const { data: formData, loading, error, refetch } = useApi(
-    apiCall,
-    [player, playerType, matchCount]
+    ['form-analysis', player, playerType, matchCount],
+    apiCall
   )
 
   const handleMatchCountChange = (count) => {
@@ -28,7 +28,7 @@ const FormAnalysis = ({ player, playerType = 'batter' }) => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-96">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="lg" text="Analyzing recent form..." />
       </div>
     )
   }

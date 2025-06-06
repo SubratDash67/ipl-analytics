@@ -4,17 +4,41 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const advancedApi = axios.create({
   baseURL: `${API_BASE_URL}/advanced`,
-  timeout: 30000,
+  timeout: 45000,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
+// Request interceptor
+advancedApi.interceptors.request.use(
+  (config) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Advanced API] ${config.method?.toUpperCase()} ${config.url}`)
+    }
+    return config
+  },
+  (error) => {
+    console.error('[Advanced API] Request Error:', error)
+    return Promise.reject(error)
+  }
+)
+
+// Response interceptor
 advancedApi.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Advanced API] ${response.status} ${response.config.url}`)
+    }
+    return response
+  },
   (error) => {
     if (error.code !== 'ERR_CANCELED') {
-      console.error('Advanced API Error:', error.response?.data || error.message)
+      console.error('[Advanced API] Error:', {
+        status: error.response?.status,
+        url: error.config?.url,
+        message: error.response?.data?.message || error.message
+      })
     }
     return Promise.reject(error)
   }
@@ -22,39 +46,47 @@ advancedApi.interceptors.response.use(
 
 export const advancedApiService = {
   async getPlayerPartnerships(player, filters = {}, signal) {
-    const response = await advancedApi.get(`/partnerships/${encodeURIComponent(player)}`, {
-      params: filters,
-      signal
-    })
+    const config = { params: filters }
+    if (signal && typeof signal.addEventListener === 'function') {
+      config.signal = signal
+    }
+    const response = await advancedApi.get(`/partnerships/${encodeURIComponent(player)}`, config)
     return response.data
   },
 
   async getPhaseAnalysis(batter, bowler, filters = {}, signal) {
-    const response = await advancedApi.get(`/phase-analysis/${encodeURIComponent(batter)}/${encodeURIComponent(bowler)}`, {
-      params: filters,
-      signal
-    })
+    const config = { params: filters }
+    if (signal && typeof signal.addEventListener === 'function') {
+      config.signal = signal
+    }
+    const response = await advancedApi.get(`/phase-analysis/${encodeURIComponent(batter)}/${encodeURIComponent(bowler)}`, config)
     return response.data
   },
 
   async getFormAnalysis(player, type = 'batter', matches = 10, signal) {
-    const response = await advancedApi.get(`/form-analysis/${encodeURIComponent(player)}`, {
-      params: { type, matches },
-      signal
-    })
+    const config = { params: { type, matches } }
+    if (signal && typeof signal.addEventListener === 'function') {
+      config.signal = signal
+    }
+    const response = await advancedApi.get(`/form-analysis/${encodeURIComponent(player)}`, config)
     return response.data
   },
 
   async calculateWinProbability(matchSituation, signal) {
-    const response = await advancedApi.post('/win-probability', matchSituation, { signal })
+    const config = {}
+    if (signal && typeof signal.addEventListener === 'function') {
+      config.signal = signal
+    }
+    const response = await advancedApi.post('/win-probability', matchSituation, config)
     return response.data
   },
 
   async getPressureAnalysis(batter, bowler, filters = {}, signal) {
-    const response = await advancedApi.get(`/pressure-analysis/${encodeURIComponent(batter)}/${encodeURIComponent(bowler)}`, {
-      params: filters,
-      signal
-    })
+    const config = { params: filters }
+    if (signal && typeof signal.addEventListener === 'function') {
+      config.signal = signal
+    }
+    const response = await advancedApi.get(`/pressure-analysis/${encodeURIComponent(batter)}/${encodeURIComponent(bowler)}`, config)
     return response.data
   }
 }

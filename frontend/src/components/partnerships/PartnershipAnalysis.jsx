@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { Users, TrendingUp, Target, Zap, Award } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import { advancedApiService } from '../../services/advancedApi'
@@ -11,21 +11,22 @@ const PartnershipAnalysis = ({ player, filters = {} }) => {
   const [sortBy, setSortBy] = useState('runs_scored')
   const [sortOrder, setSortOrder] = useState('desc')
 
-  // Memoize the API call to prevent infinite loops
-  const apiCall = useMemo(() => 
-    (signal) => advancedApiService.getPlayerPartnerships(player, filters, signal),
-    [player, JSON.stringify(filters)]
-  )
-
   const { data: partnershipData, loading, error, refetch } = useApi(
-    apiCall,
-    [player, JSON.stringify(filters)]
+    ['partnerships', player, JSON.stringify(filters)],
+    () => advancedApiService.getPlayerPartnerships(player, filters),
+    {
+      enabled: !!player && player.trim() !== '',
+      retry: 2,
+      onError: (err) => {
+        console.error('Partnership API Error:', err)
+      }
+    }
   )
 
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-96">
-        <LoadingSpinner size="lg" />
+        <LoadingSpinner size="lg" text="Loading partnership analysis..." />
       </div>
     )
   }
@@ -35,6 +36,7 @@ const PartnershipAnalysis = ({ player, filters = {} }) => {
       <ErrorMessage 
         message="Failed to load partnership analysis" 
         onRetry={refetch}
+        showBackButton={false}
       />
     )
   }
@@ -44,6 +46,8 @@ const PartnershipAnalysis = ({ player, filters = {} }) => {
       <ErrorMessage 
         message="No partnership data received from server" 
         onRetry={refetch}
+        type="info"
+        title="No Data"
       />
     )
   }
@@ -53,6 +57,8 @@ const PartnershipAnalysis = ({ player, filters = {} }) => {
       <ErrorMessage 
         message={partnershipData.error} 
         onRetry={refetch}
+        type="warning"
+        title="Data Error"
       />
     )
   }
@@ -61,40 +67,58 @@ const PartnershipAnalysis = ({ player, filters = {} }) => {
   
   if (partnerships.length === 0) {
     return (
-      <div className="card text-center py-8">
-        <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">No partnership data available for {player}</p>
-        <button 
-          onClick={refetch}
-          className="mt-4 btn-primary"
-        >
-          Try Again
-        </button>
+      <div className="w-full max-w-7xl mx-auto px-4">
+        <div className="card text-center py-12">
+          <Users className="h-20 w-20 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            No Partnership Data Available
+          </h3>
+          <p className="text-gray-600 mb-4">
+            No partnership data found for <strong>{player}</strong>
+          </p>
+          <p className="text-gray-500 text-sm mb-6">
+            This could be because:
+          </p>
+          <ul className="text-gray-500 text-sm space-y-1 mb-6 max-w-md mx-auto">
+            <li>• The player hasn't formed significant partnerships</li>
+            <li>• Partnerships require minimum 6 balls together</li>
+            <li>• Data may not be available for this player</li>
+          </ul>
+          <button 
+            onClick={refetch}
+            className="btn-primary"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     )
   }
 
-  // Filter out invalid partnerships (where both batsmen are the same)
   const validPartnerships = partnerships.filter(partnership => {
     const batsman1 = partnership.batsman1?.trim() || ''
     const batsman2 = partnership.batsman2?.trim() || ''
-    
-    // Ensure both batsmen exist and are different
-    return batsman1 && batsman2 && batsman1 !== batsman2
+    return batsman1 && batsman2 && batsman1 !== batsman2 && partnership.runs_scored > 0
   })
 
   if (validPartnerships.length === 0) {
     return (
-      <div className="card text-center py-8">
-        <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">No valid partnership combinations found for {player}</p>
-        <p className="text-gray-400 text-sm mt-2">Partnerships require two different batsmen</p>
-        <button 
-          onClick={refetch}
-          className="mt-4 btn-primary"
-        >
-          Try Again
-        </button>
+      <div className="w-full max-w-7xl mx-auto px-4">
+        <div className="card text-center py-12">
+          <Users className="h-20 w-20 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            No Valid Partnerships Found
+          </h3>
+          <p className="text-gray-600 mb-4">
+            No valid partnership combinations found for <strong>{player}</strong>
+          </p>
+          <button 
+            onClick={refetch}
+            className="btn-primary"
+          >
+            Refresh Data
+          </button>
+        </div>
       </div>
     )
   }

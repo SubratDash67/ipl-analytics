@@ -1,26 +1,119 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
-import { Home, AlertCircle } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
+import { Home, ArrowLeft, Search, TrendingUp } from 'lucide-react'
 
 const NotFoundPage = () => {
+  const navigate = useNavigate()
+
+  const quickLinks = [
+    {
+      title: 'Head-to-Head Analysis',
+      description: 'Compare batter vs bowler matchups',
+      href: '/',
+      icon: TrendingUp,
+      color: 'blue'
+    },
+    {
+      title: 'Player Comparison',
+      description: 'Compare multiple players side by side',
+      href: '/compare',
+      icon: Search,
+      color: 'green'
+    },
+    {
+      title: 'Advanced Analytics',
+      description: 'Explore partnerships, phases, and form',
+      href: '/advanced',
+      icon: TrendingUp,
+      color: 'purple'
+    }
+  ]
+
   return (
-    <div className="min-h-96 flex items-center justify-center">
-      <div className="text-center">
-        <AlertCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Page Not Found</h2>
-        <p className="text-gray-600 mb-8 max-w-md">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
-        <Link 
-          to="/" 
-          className="inline-flex items-center space-x-2 btn-primary"
-        >
-          <Home className="h-4 w-4" />
-          <span>Back to Home</span>
-        </Link>
+    <>
+      <Helmet>
+        <title>Page Not Found - IPL Analytics</title>
+        <meta name="description" content="The page you're looking for doesn't exist. Explore our cricket analytics features instead." />
+      </Helmet>
+
+      <div className="min-h-96 flex items-center justify-center px-4">
+        <div className="max-w-2xl w-full text-center">
+          {/* Error Code */}
+          <div className="mb-8">
+            <div className="text-8xl md:text-9xl font-bold text-gray-300 mb-4">
+              404
+            </div>
+            <div className="w-24 h-1 bg-blue-600 mx-auto mb-6"></div>
+          </div>
+
+          {/* Error Message */}
+          <div className="mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+              Oops! Page Not Found
+            </h1>
+            <p className="text-gray-600 text-lg mb-6 max-w-md mx-auto">
+              The page you're looking for doesn't exist or has been moved. 
+              Let's get you back to exploring cricket analytics.
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <Link
+              to="/"
+              className="btn-primary flex items-center justify-center space-x-2"
+            >
+              <Home className="h-4 w-4" />
+              <span>Go Home</span>
+            </Link>
+            
+            <button
+              onClick={() => navigate(-1)}
+              className="btn-secondary flex items-center justify-center space-x-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Go Back</span>
+            </button>
+          </div>
+
+          {/* Quick Links */}
+          <div className="space-y-6">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Or explore these popular features:
+            </h2>
+            
+            <div className="grid md:grid-cols-3 gap-4">
+              {quickLinks.map((link, index) => (
+                <Link
+                  key={index}
+                  to={link.href}
+                  className="group p-6 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                >
+                  <div className={`w-12 h-12 bg-${link.color}-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-${link.color}-200 transition-colors`}>
+                    <link.icon className={`h-6 w-6 text-${link.color}-600`} />
+                  </div>
+                  <h3 className={`font-semibold text-gray-900 mb-2 group-hover:text-${link.color}-600 transition-colors`}>
+                    {link.title}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {link.description}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Help Text */}
+          <div className="mt-12 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">
+              <strong>Need help?</strong> If you believe this is an error, please check the URL 
+              or contact our support team. We're here to help you explore cricket analytics.
+            </p>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 

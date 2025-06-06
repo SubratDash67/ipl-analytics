@@ -10,23 +10,19 @@ class DatabaseService:
     def get_data_summary(self) -> Dict[str, Any]:
         """Get summary statistics of the dataset"""
         try:
-            # Get match count
             matches_query = "SELECT COUNT(*) as count FROM matches"
             matches_result = db_manager.execute_query(matches_query)
             matches_count = matches_result[0]["count"] if matches_result else 0
 
-            # Get deliveries count
             deliveries_query = "SELECT COUNT(*) as count FROM deliveries"
             deliveries_result = db_manager.execute_query(deliveries_query)
             deliveries_count = deliveries_result[0]["count"] if deliveries_result else 0
 
-            # Get unique batters
-            batters_query = "SELECT COUNT(DISTINCT batter) as count FROM deliveries"
+            batters_query = "SELECT COUNT(DISTINCT batter) as count FROM deliveries WHERE batter IS NOT NULL"
             batters_result = db_manager.execute_query(batters_query)
             batters_count = batters_result[0]["count"] if batters_result else 0
 
-            # Get unique bowlers
-            bowlers_query = "SELECT COUNT(DISTINCT bowler) as count FROM deliveries"
+            bowlers_query = "SELECT COUNT(DISTINCT bowler) as count FROM deliveries WHERE bowler IS NOT NULL"
             bowlers_result = db_manager.execute_query(bowlers_query)
             bowlers_count = bowlers_result[0]["count"] if bowlers_result else 0
 
@@ -53,7 +49,7 @@ class DatabaseService:
                 batter_query = """
                     SELECT DISTINCT batter 
                     FROM deliveries 
-                    WHERE batter LIKE ? 
+                    WHERE batter LIKE ? AND batter IS NOT NULL
                     ORDER BY batter 
                     LIMIT 20
                 """
@@ -64,7 +60,7 @@ class DatabaseService:
                 bowler_query = """
                     SELECT DISTINCT bowler 
                     FROM deliveries 
-                    WHERE bowler LIKE ? 
+                    WHERE bowler LIKE ? AND bowler IS NOT NULL
                     ORDER BY bowler 
                     LIMIT 20
                 """
@@ -103,10 +99,12 @@ class DatabaseService:
             if not deliveries:
                 return {"error": "No data found for this matchup"}
 
-            # Calculate statistics
             total_deliveries = len(deliveries)
             runs = sum(d["batsman_runs"] or 0 for d in deliveries)
+
+            # Count balls faced (excluding wides)
             balls_faced = sum(1 for d in deliveries if d["extras_type"] != "wides")
+
             dismissals = sum(
                 1
                 for d in deliveries
@@ -114,24 +112,36 @@ class DatabaseService:
             )
             boundaries = sum(1 for d in deliveries if d["batsman_runs"] in [4, 6])
 
+            # Correct strike rate calculation: (runs/balls) * 100
+            strike_rate = (
+                round((runs / balls_faced) * 100, 2) if balls_faced > 0 else 0.0
+            )
+
+            # Correct average calculation: runs/dismissals
+            average = round(runs / dismissals, 2) if dismissals > 0 else runs
+
             batting_stats = {
                 "runs": runs,
                 "balls_faced": balls_faced,
-                "strike_rate": (
-                    round((runs / balls_faced) * 100, 2) if balls_faced > 0 else 0
-                ),
+                "strike_rate": strike_rate,
                 "dismissals": dismissals,
                 "boundaries": boundaries,
-                "average": round(runs / dismissals, 2) if dismissals > 0 else runs,
+                "average": average,
             }
+
+            # Count balls bowled (excluding wides for economy calculation)
+            balls_bowled = sum(
+                1 for d in deliveries if d["extras_type"] not in ["wides", "noballs"]
+            )
+
+            # Correct economy rate calculation: (runs_conceded / overs)
+            economy = round((runs / (balls_bowled / 6)), 2) if balls_bowled > 0 else 0.0
 
             bowling_stats = {
                 "runs_conceded": runs,
-                "balls_bowled": balls_faced,
+                "balls_bowled": balls_bowled,
                 "wickets": dismissals,
-                "economy": (
-                    round((runs / (balls_faced / 6)), 2) if balls_faced > 0 else 0
-                ),
+                "economy": economy,
                 "dot_balls": sum(1 for d in deliveries if d["total_runs"] == 0),
             }
 
@@ -148,33 +158,77 @@ class DatabaseService:
             return {"error": str(e)}
 
     def get_player_stats(self, player: str, player_type: str) -> Dict[str, Any]:
-        """Get individual player statistics"""
+        """Get individual player statistics with correct calculations"""
         try:
             if player_type == "batter":
                 query = """
                     SELECT 
-                        COUNT(*) as matches,
+                        COUNT(DISTINCT match_id) as matches,
                         SUM(batsman_runs) as runs,
-                        COUNT(CASE WHEN extras_type != 'wides' THEN 1 END) as balls,
+                        COUNT(CASE WHEN extras_type IS NULL OR extras_type != 'wides' THEN 1 END) as balls,
                         COUNT(CASE WHEN is_wicket = 1 AND player_dismissed = batter THEN 1 END) as dismissals,
                         COUNT(CASE WHEN batsman_runs IN (4, 6) THEN 1 END) as boundaries
                     FROM deliveries d
-                    JOIN matches m ON d.match_id = m.id
                     WHERE d.batter = ?
                 """
-            else:
+
+                result = db_manager.execute_query(query, (player,))
+
+                if result and result[0]:
+                    stats = dict(result[0])
+                    runs = stats.get("runs", 0) or 0
+                    balls = stats.get("balls", 0) or 0
+                    dismissals = stats.get("dismissals", 0) or 0
+
+                    # Calculate correct strike rate: (runs/balls) * 100
+                    stats["strike_rate"] = (
+                        round((runs / balls) * 100, 2) if balls > 0 else 0.0
+                    )
+
+                    # Calculate correct average: runs/dismissals
+                    stats["average"] = (
+                        round(runs / dismissals, 2) if dismissals > 0 else runs
+                    )
+
+                    return {"stats": stats}
+
+            else:  # bowler
                 query = """
                     SELECT 
                         COUNT(DISTINCT match_id) as matches,
                         SUM(total_runs) as runs_conceded,
-                        COUNT(CASE WHEN extras_type NOT IN ('wides', 'noballs') THEN 1 END) as balls,
+                        COUNT(CASE WHEN extras_type IS NULL OR extras_type NOT IN ('wides', 'noballs') THEN 1 END) as balls,
                         COUNT(CASE WHEN is_wicket = 1 THEN 1 END) as wickets
                     FROM deliveries
                     WHERE bowler = ?
                 """
 
-            result = db_manager.execute_query(query, (player,))
-            return {"stats": dict(result[0]) if result else {}}
+                result = db_manager.execute_query(query, (player,))
+
+                if result and result[0]:
+                    stats = dict(result[0])
+                    runs_conceded = stats.get("runs_conceded", 0) or 0
+                    balls = stats.get("balls", 0) or 0
+                    wickets = stats.get("wickets", 0) or 0
+
+                    # Calculate correct economy rate: (runs_conceded / overs)
+                    stats["economy"] = (
+                        round((runs_conceded / (balls / 6)), 2) if balls > 0 else 0.0
+                    )
+
+                    # Calculate bowling average: runs_conceded/wickets
+                    stats["bowling_average"] = (
+                        round(runs_conceded / wickets, 2) if wickets > 0 else 0.0
+                    )
+
+                    # Calculate bowling strike rate: balls/wickets
+                    stats["bowling_strike_rate"] = (
+                        round(balls / wickets, 2) if wickets > 0 else 0.0
+                    )
+
+                    return {"stats": stats}
+
+            return {"stats": {}}
 
         except Exception as e:
             self.logger.error(f"Error getting player stats: {e}")
@@ -183,11 +237,9 @@ class DatabaseService:
     def get_available_filters(self) -> Dict[str, List[str]]:
         """Get available filter options"""
         try:
-            # Get seasons
-            seasons_query = "SELECT DISTINCT season FROM matches ORDER BY season"
+            seasons_query = "SELECT DISTINCT season FROM matches WHERE season IS NOT NULL ORDER BY season"
             seasons = [row["season"] for row in db_manager.execute_query(seasons_query)]
 
-            # Get venues
             venues_query = "SELECT DISTINCT venue FROM matches WHERE venue IS NOT NULL ORDER BY venue"
             venues = [row["venue"] for row in db_manager.execute_query(venues_query)]
 
@@ -197,6 +249,17 @@ class DatabaseService:
             self.logger.error(f"Error getting filters: {e}")
             return {"seasons": [], "venues": []}
 
+    def get_venues(self) -> List[str]:
+        """Get all unique venues"""
+        try:
+            venues_query = "SELECT DISTINCT venue FROM matches WHERE venue IS NOT NULL ORDER BY venue"
+            venues = [row["venue"] for row in db_manager.execute_query(venues_query)]
+            return venues
+
+        except Exception as e:
+            self.logger.error(f"Error getting venues: {e}")
+            return []
+
     def get_player_matchups(self, player: str, player_type: str) -> Dict[str, Any]:
         """Get player matchups"""
         try:
@@ -204,7 +267,7 @@ class DatabaseService:
                 query = """
                     SELECT bowler, COUNT(*) as encounters
                     FROM deliveries
-                    WHERE batter = ?
+                    WHERE batter = ? AND bowler IS NOT NULL
                     GROUP BY bowler
                     ORDER BY encounters DESC
                     LIMIT 10
@@ -213,7 +276,7 @@ class DatabaseService:
                 query = """
                     SELECT batter, COUNT(*) as encounters
                     FROM deliveries
-                    WHERE bowler = ?
+                    WHERE bowler = ? AND batter IS NOT NULL
                     GROUP BY batter
                     ORDER BY encounters DESC
                     LIMIT 10
