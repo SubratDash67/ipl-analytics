@@ -5,7 +5,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { HelmetProvider } from 'react-helmet-async'
 import { Toaster } from 'react-hot-toast'
 
-import { AppProvider } from './contexts/AppContext'
+import { AppProvider } from './components/contexts/AppContext'
 import Layout from './components/layout/Layout'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import LoadingSpinner from './components/common/LoadingSpinner'
