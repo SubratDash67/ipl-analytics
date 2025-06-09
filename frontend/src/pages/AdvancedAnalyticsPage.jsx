@@ -12,7 +12,7 @@ import {
   BarChart3,
   Activity
 } from 'lucide-react'
-import { useApp } from '../contexts/AppContext'
+
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import PartnershipAnalysis from '../components/partnerships/PartnershipAnalysis'
 import PhaseAnalysisDetail from '../components/phase/PhaseAnalysisDetail'
