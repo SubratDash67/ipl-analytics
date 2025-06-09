@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import Header from './Header'
 import Footer from './Footer'
 import Breadcrumbs from './Breadcrumbs'
-import { useApp } from 'components/contexts/AppContext.jsx'
+import { useApp } from '../../contexts/AppContext'
 
 const Layout = ({ children }) => {
   const location = useLocation()

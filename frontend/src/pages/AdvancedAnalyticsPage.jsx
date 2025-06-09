@@ -12,12 +12,12 @@ import {
   BarChart3,
   Activity
 } from 'lucide-react'
+import { useApp } from '../contexts/AppContext'
+import LoadingSpinner from '../components/common/LoadingSpinner'
 import PartnershipAnalysis from '../components/partnerships/PartnershipAnalysis'
 import PhaseAnalysisDetail from '../components/phase/PhaseAnalysisDetail'
 import FormAnalysis from '../components/form/FormAnalysis'
 import WinProbabilityCalculator from '../components/probability/WinProbabilityCalculator'
-import PlayerSearch from '../components/player/PlayerSearch'
-
 const AdvancedAnalyticsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('tab') || 'partnerships'

@@ -17,14 +17,12 @@ import {
 } from 'lucide-react'
 import { useApi } from '../hooks/useApi'
 import { apiService } from '../services/api'
-import { useApp } from '../components/contexts/AppContext'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import StatCard from '../components/stats/StatCard'
 import PerformanceChart from '../components/charts/PerformanceChart'
 import VenueBreakdown from '../components/analysis/VenueBreakdown'
 import SeasonTrends from '../components/analysis/SeasonTrends'
-
 const HeadToHeadPage = () => {
   const { batter, bowler } = useParams()
   const navigate = useNavigate()

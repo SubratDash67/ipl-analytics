@@ -12,9 +12,8 @@ import {
   Settings,
   Github
 } from 'lucide-react'
-import { useApp } from 'components/contexts/AppContext.jsx'
+import { useApp } from '../../contexts/AppContext'
 import PlayerSearch from '../player/PlayerSearch'
-
 const Header = () => {
   const location = useLocation()
   const navigate = useNavigate()

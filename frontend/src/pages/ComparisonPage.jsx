@@ -19,7 +19,6 @@ import { cricketHelpers } from '../utils/cricketHelpers'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import ComparisonChart from '../components/charts/ComparisonChart'
-
 const ComparisonPage = () => {
   const [players, setPlayers] = useState([])
   const [playerType, setPlayerType] = useState('batter')
