@@ -19,6 +19,7 @@ import { useApi } from '../hooks/useApi'
 import { apiService } from '../services/api'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
+import { useApp } from '../components/contexts/AppContext'
 
 const HomePage = () => {
   const navigate = useNavigate()
@@ -137,7 +138,7 @@ const HomePage = () => {
               Explore head-to-head performance, advanced analytics, and real-time insights.
             </p>
           </div>
-
+          
           <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -267,7 +268,7 @@ const HomePage = () => {
         </div>
 
         {/* Recent Searches */}
-        {recentSearches.length > 0 && (
+        {recentSearches && recentSearches.length > 0 && (
           <div className="card">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-gray-900 flex items-center">
