@@ -683,7 +683,7 @@
   }
   
   .input-field {
-    @apply text-16px; /* Prevents zoom on iOS */
+    @apply text-base; /* FIXED: Changed from text-16px to text-base */
   }
 }
 
