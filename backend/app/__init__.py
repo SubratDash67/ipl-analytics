@@ -13,69 +13,14 @@ def create_app(config_name=None):
     config_name = config_name or os.getenv("FLASK_ENV", "production")
     app.config.from_object(config[config_name])
 
-    # Configure CORS with explicit settings
+    # Simple CORS configuration to avoid duplicate headers
     CORS(
         app,
-        origins=[
-            "https://bowlervbatsman.netlify.app",
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-        ],
+        origins=["https://bowlervbatsman.netlify.app"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=[
-            "Content-Type",
-            "Authorization",
-            "X-Requested-With",
-            "Accept",
-            "Origin",
-        ],
+        allow_headers=["Content-Type", "Authorization"],
         supports_credentials=False,
-        expose_headers=["Content-Length", "X-Requested-With"],
     )
-
-    # Add CORS headers manually as backup
-    @app.after_request
-    def after_request(response):
-        origin = request.headers.get("Origin")
-        allowed_origins = [
-            "https://bowlervbatsman.netlify.app",
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-        ]
-
-        if origin in allowed_origins:
-            response.headers.add("Access-Control-Allow-Origin", origin)
-        else:
-            response.headers.add(
-                "Access-Control-Allow-Origin", "https://bowlervbatsman.netlify.app"
-            )
-
-        response.headers.add(
-            "Access-Control-Allow-Headers",
-            "Content-Type,Authorization,X-Requested-With,Accept,Origin",
-        )
-        response.headers.add(
-            "Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS"
-        )
-        response.headers.add("Access-Control-Allow-Credentials", "false")
-        return response
-
-    # Handle preflight requests
-    @app.before_request
-    def handle_preflight():
-        if request.method == "OPTIONS":
-            response = make_response()
-            response.headers.add(
-                "Access-Control-Allow-Origin", "https://bowlervbatsman.netlify.app"
-            )
-            response.headers.add(
-                "Access-Control-Allow-Headers",
-                "Content-Type,Authorization,X-Requested-With,Accept,Origin",
-            )
-            response.headers.add(
-                "Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS"
-            )
-            return response
 
     logging.basicConfig(
         level=logging.INFO,
@@ -92,11 +37,6 @@ def create_app(config_name=None):
             "status": "IPL Analytics API is running",
             "version": "2.0.0",
             "environment": config_name,
-            "cors_enabled": True,
-            "allowed_origins": [
-                "https://bowlervbatsman.netlify.app",
-                "http://localhost:3000",
-            ],
         }
 
     @app.route("/health")
@@ -105,16 +45,6 @@ def create_app(config_name=None):
             "status": "healthy",
             "service": "ipl-analytics-backend",
             "environment": config_name,
-            "cors_enabled": True,
-        }
-
-    # Test CORS endpoint
-    @app.route("/test-cors")
-    def test_cors():
-        return {
-            "message": "CORS is working",
-            "origin": request.headers.get("Origin", "No origin header"),
-            "method": request.method,
         }
 
     @app.errorhandler(404)

@@ -1,232 +1,216 @@
 import React, { useState } from 'react'
-import { Calculator, TrendingUp, Target, Clock, Users } from 'lucide-react'
-import { useApiMutation } from '../../hooks/useApi'
+import { Calculator, TrendingUp, Target, Clock, Zap } from 'lucide-react'
+import { useMutation } from '@tanstack/react-query'
 import { advancedApiService } from '../../services/advancedApi'
 import LoadingSpinner from '../common/LoadingSpinner'
+import ErrorMessage from '../common/ErrorMessage'
 
 const WinProbabilityCalculator = () => {
   const [matchSituation, setMatchSituation] = useState({
     current_score: 120,
     target: 180,
-    overs_remaining: 8.0,
-    wickets_left: 6,
-    run_rate_required: 0,
-    current_run_rate: 0
+    overs_remaining: 8.4,
+    wickets_left: 6
   })
 
-  const [result, setResult] = useState(null)
-
-  const { mutate: calculateProbability, isLoading } = useApiMutation(
-    (data) => advancedApiService.calculateWinProbability(data),
-    {
-      onSuccess: (data) => {
-        setResult(data)
-      }
+  const winProbabilityMutation = useMutation({
+    mutationFn: (data) => advancedApiService.calculateWinProbability(data),
+    onError: (error) => {
+      console.error('Win probability calculation error:', error)
     }
-  )
-
-  const handleInputChange = (field, value) => {
-    const updatedSituation = {
-      ...matchSituation,
-      [field]: parseFloat(value) || 0
-    }
-    
-    // Auto-calculate required run rate
-    if (field === 'current_score' || field === 'target' || field === 'overs_remaining') {
-      const runsNeeded = updatedSituation.target - updatedSituation.current_score
-      const oversLeft = updatedSituation.overs_remaining
-      updatedSituation.run_rate_required = oversLeft > 0 ? (runsNeeded / oversLeft).toFixed(2) : 0
-    }
-    
-    setMatchSituation(updatedSituation)
-  }
+  })
 
   const handleCalculate = () => {
-    calculateProbability(matchSituation)
+    winProbabilityMutation.mutate(matchSituation)
   }
 
-  const getProbabilityColor = (probability) => {
-    if (probability >= 70) return 'text-green-600 bg-green-50'
-    if (probability >= 40) return 'text-yellow-600 bg-yellow-50'
-    return 'text-red-600 bg-red-50'
+  const handleInputChange = (field, value) => {
+    setMatchSituation(prev => ({
+      ...prev,
+      [field]: parseFloat(value) || 0
+    }))
   }
+
+  const runsNeeded = matchSituation.target - matchSituation.current_score
+  const requiredRunRate = matchSituation.overs_remaining > 0 ? 
+    (runsNeeded / matchSituation.overs_remaining).toFixed(2) : 0
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <div className="card">
-        <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center">
           <Calculator className="h-6 w-6 text-orange-600 mr-2" />
-          Match Situation
-        </h3>
-        
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div>
-            <label className="label">
-              <Target className="h-4 w-4 inline mr-2" />
-              Current Score
-            </label>
-            <input
-              type="number"
-              className="input-field"
-              value={matchSituation.current_score}
-              onChange={(e) => handleInputChange('current_score', e.target.value)}
-              placeholder="120"
-            />
-          </div>
+          Win Probability Calculator
+        </h2>
+        <p className="text-gray-600">
+          Calculate real-time win probability based on current match situation
+        </p>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Input Form */}
+        <div className="card">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Match Situation</h3>
           
-          <div>
-            <label className="label">
-              <Target className="h-4 w-4 inline mr-2" />
-              Target Score
-            </label>
-            <input
-              type="number"
-              className="input-field"
-              value={matchSituation.target}
-              onChange={(e) => handleInputChange('target', e.target.value)}
-              placeholder="180"
-            />
-          </div>
-          
-          <div>
-            <label className="label">
-              <Clock className="h-4 w-4 inline mr-2" />
-              Overs Remaining
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="input-field"
-              value={matchSituation.overs_remaining}
-              onChange={(e) => handleInputChange('overs_remaining', e.target.value)}
-              placeholder="8.0"
-            />
-          </div>
-          
-          <div>
-            <label className="label">
-              <Users className="h-4 w-4 inline mr-2" />
-              Wickets Left
-            </label>
-            <input
-              type="number"
-              className="input-field"
-              value={matchSituation.wickets_left}
-              onChange={(e) => handleInputChange('wickets_left', e.target.value)}
-              placeholder="6"
-              min="0"
-              max="10"
-            />
-          </div>
-          
-          <div>
-            <label className="label">
-              <TrendingUp className="h-4 w-4 inline mr-2" />
-              Required Run Rate
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              className="input-field bg-gray-50"
-              value={matchSituation.run_rate_required}
-              readOnly
-            />
-          </div>
-          
-          <div className="flex items-end">
+          <div className="space-y-6">
+            <div>
+              <label className="label">Current Score</label>
+              <input
+                type="number"
+                value={matchSituation.current_score}
+                onChange={(e) => handleInputChange('current_score', e.target.value)}
+                className="input-field"
+                min="0"
+                max="400"
+              />
+            </div>
+
+            <div>
+              <label className="label">Target Score</label>
+              <input
+                type="number"
+                value={matchSituation.target}
+                onChange={(e) => handleInputChange('target', e.target.value)}
+                className="input-field"
+                min="1"
+                max="400"
+              />
+            </div>
+
+            <div>
+              <label className="label">Overs Remaining</label>
+              <input
+                type="number"
+                step="0.1"
+                value={matchSituation.overs_remaining}
+                onChange={(e) => handleInputChange('overs_remaining', e.target.value)}
+                className="input-field"
+                min="0"
+                max="20"
+              />
+            </div>
+
+            <div>
+              <label className="label">Wickets Left</label>
+              <input
+                type="number"
+                value={matchSituation.wickets_left}
+                onChange={(e) => handleInputChange('wickets_left', e.target.value)}
+                className="input-field"
+                min="0"
+                max="10"
+              />
+            </div>
+
             <button
               onClick={handleCalculate}
-              disabled={isLoading}
+              disabled={winProbabilityMutation.isLoading}
               className="btn-primary w-full flex items-center justify-center space-x-2"
             >
-              {isLoading ? (
+              {winProbabilityMutation.isLoading ? (
                 <LoadingSpinner size="sm" />
               ) : (
                 <>
                   <Calculator className="h-4 w-4" />
-                  <span>Calculate</span>
+                  <span>Calculate Win Probability</span>
                 </>
               )}
             </button>
           </div>
         </div>
-      </div>
 
-      {result && (
-        <div className="card">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">
-            Win Probability Analysis
-          </h3>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="text-center">
-              <div className={`inline-flex items-center justify-center w-32 h-32 rounded-full text-4xl font-bold ${getProbabilityColor(result.win_probability)}`}>
-                {result.win_probability}%
+        {/* Results */}
+        <div className="space-y-6">
+          {/* Quick Stats */}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Situation</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{runsNeeded}</div>
+                <div className="text-sm text-gray-600">Runs Needed</div>
               </div>
-              <p className="text-lg font-medium text-gray-900 mt-4">
-                Win Probability
-              </p>
-              <p className="text-sm text-gray-600">
-                Based on historical data and current situation
-              </p>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600">Runs Needed</span>
-                <span className="font-medium text-gray-900">
-                  {result.runs_needed || (matchSituation.target - matchSituation.current_score)}
-                </span>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{requiredRunRate}</div>
+                <div className="text-sm text-gray-600">Required Run Rate</div>
               </div>
-              
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600">Required Run Rate</span>
-                <span className="font-medium text-gray-900">
-                  {matchSituation.run_rate_required}
-                </span>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">{matchSituation.overs_remaining}</div>
+                <div className="text-sm text-gray-600">Overs Left</div>
               </div>
-              
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600">Balls Remaining</span>
-                <span className="font-medium text-gray-900">
-                  {Math.floor(matchSituation.overs_remaining * 6)}
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600">Wickets in Hand</span>
-                <span className="font-medium text-gray-900">
-                  {matchSituation.wickets_left}
-                </span>
+              <div className="text-center p-3 bg-orange-50 rounded-lg">
+                <div className="text-2xl font-bold text-orange-600">{matchSituation.wickets_left}</div>
+                <div className="text-sm text-gray-600">Wickets Left</div>
               </div>
             </div>
           </div>
-          
-          {result.factors && (
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">Key Factors</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                {result.factors.map((factor, index) => (
-                  <li key={index}>• {factor}</li>
-                ))}
-              </ul>
+
+          {/* Win Probability Result */}
+          {winProbabilityMutation.isError && (
+            <ErrorMessage 
+              message="Failed to calculate win probability" 
+              onRetry={handleCalculate}
+            />
+          )}
+
+          {winProbabilityMutation.data && (
+            <div className="card">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Win Probability</h3>
+              
+              <div className="text-center mb-6">
+                <div className="text-6xl font-bold text-blue-600 mb-2">
+                  {winProbabilityMutation.data.win_probability}%
+                </div>
+                <div className="text-gray-600">Chance of winning</div>
+              </div>
+
+              <div className="w-full bg-gray-200 rounded-full h-4 mb-6">
+                <div 
+                  className="bg-blue-600 h-4 rounded-full transition-all duration-500"
+                  style={{ width: `${winProbabilityMutation.data.win_probability}%` }}
+                ></div>
+              </div>
+
+              {winProbabilityMutation.data.factors && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">Key Factors</h4>
+                  <div className="space-y-2">
+                    {winProbabilityMutation.data.factors.map((factor, index) => (
+                      <div key={index} className="flex items-center text-sm text-gray-600">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                        {factor}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
+
+          {/* Preset Scenarios */}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Preset Scenarios</h3>
+            <div className="space-y-2">
+              {[
+                { name: 'Easy Chase', current_score: 150, target: 160, overs_remaining: 5, wickets_left: 8 },
+                { name: 'Moderate Chase', current_score: 120, target: 180, overs_remaining: 8, wickets_left: 6 },
+                { name: 'Difficult Chase', current_score: 80, target: 200, overs_remaining: 6, wickets_left: 4 },
+                { name: 'Last Over Thriller', current_score: 175, target: 180, overs_remaining: 1, wickets_left: 3 }
+              ].map((scenario, index) => (
+                <button
+                  key={index}
+                  onClick={() => setMatchSituation(scenario)}
+                  className="w-full text-left p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                >
+                  <div className="font-medium text-gray-900">{scenario.name}</div>
+                  <div className="text-sm text-gray-600">
+                    {scenario.current_score}/{scenario.target} • {scenario.overs_remaining} overs • {scenario.wickets_left} wickets
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      )}
-      
-      {!result && (
-        <div className="card text-center py-12">
-          <Calculator className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Enter Match Situation
-          </h3>
-          <p className="text-gray-600 max-w-md mx-auto">
-            Fill in the current match situation above and click calculate to get 
-            the win probability based on historical data and statistical models.
-          </p>
-        </div>
-      )}
+      </div>
     </div>
   )
 }
