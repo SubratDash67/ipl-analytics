@@ -12,7 +12,7 @@ import {
   Settings,
   Github
 } from 'lucide-react'
-import { useApp } from '../../contexts/AppContext'
+import { useApp } from 'components/contexts/AppContext.jsx'
 import PlayerSearch from '../player/PlayerSearch'
 
 const Header = () => {
