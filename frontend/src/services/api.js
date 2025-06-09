@@ -1,12 +1,14 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+// Use environment variable for API URL with fallback
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ipl-analytics-backend-api.onrender.com/api'
 
 console.log('API_BASE_URL:', API_BASE_URL)
+console.log('Environment:', import.meta.env.MODE)
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 60000, // Increased timeout for deployed backend
   headers: {
     'Content-Type': 'application/json',
   },
@@ -27,7 +29,7 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor
+// Response interceptor with better error handling for production
 api.interceptors.response.use(
   (response) => {
     if (process.env.NODE_ENV === 'development') {
@@ -36,7 +38,19 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
-    const errorMessage = error.response?.data?.message || error.message || 'An error occurred'
+    const errorMessage = error.response?.data?.error || 
+                        error.response?.data?.message || 
+                        error.message || 
+                        'An error occurred'
+    
+    // Handle different error types
+    if (error.code === 'ECONNABORTED') {
+      console.error('[API] Request timeout')
+    } else if (error.response?.status >= 500) {
+      console.error('[API] Server error:', error.response.status)
+    } else if (error.response?.status === 404) {
+      console.error('[API] Resource not found')
+    }
     
     if (process.env.NODE_ENV === 'development') {
       console.error('[API] Response Error:', {

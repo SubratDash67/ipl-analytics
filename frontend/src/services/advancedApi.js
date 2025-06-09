@@ -1,10 +1,10 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://ipl-analytics-backend-api.onrender.com/api'
 
 const advancedApi = axios.create({
   baseURL: `${API_BASE_URL}/advanced`,
-  timeout: 45000,
+  timeout: 60000, // Increased timeout for deployed backend
   headers: {
     'Content-Type': 'application/json',
   },
@@ -34,10 +34,15 @@ advancedApi.interceptors.response.use(
   },
   (error) => {
     if (error.code !== 'ERR_CANCELED') {
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          error.message || 
+                          'An error occurred'
+      
       console.error('[Advanced API] Error:', {
         status: error.response?.status,
         url: error.config?.url,
-        message: error.response?.data?.message || error.message
+        message: errorMessage
       })
     }
     return Promise.reject(error)
