@@ -4,24 +4,67 @@ import { useApi } from '../../hooks/useApi'
 import { advancedApiService } from '../../services/advancedApi'
 import LoadingSpinner from '../common/LoadingSpinner'
 import ErrorMessage from '../common/ErrorMessage'
+import PlayerSearch from '../player/PlayerSearch'
 import PartnershipChart from './PartnershipChart'
 import PartnershipTable from './PartnershipTable'
 
-const PartnershipAnalysis = ({ player, filters = {} }) => {
+const PartnershipAnalysis = ({ player: initialPlayer, onPlayerSelect, filters = {} }) => {
+  const [selectedPlayer, setSelectedPlayer] = useState(initialPlayer || '')
   const [sortBy, setSortBy] = useState('runs_scored')
   const [sortOrder, setSortOrder] = useState('desc')
 
+  const handlePlayerSelect = (player) => {
+    setSelectedPlayer(player)
+    if (onPlayerSelect) {
+      onPlayerSelect(player)
+    }
+  }
+
   const { data: partnershipData, loading, error, refetch } = useApi(
-    ['partnerships', player, JSON.stringify(filters)],
-    () => advancedApiService.getPlayerPartnerships(player, filters),
+    ['partnerships', selectedPlayer, JSON.stringify(filters)],
+    () => selectedPlayer ? advancedApiService.getPlayerPartnerships(selectedPlayer, filters) : Promise.resolve(null),
     {
-      enabled: !!player && player.trim() !== '',
+      enabled: !!selectedPlayer && selectedPlayer.trim() !== '',
       retry: 2,
       onError: (err) => {
         console.error('Partnership API Error:', err)
       }
     }
   )
+
+  if (!selectedPlayer) {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-4">
+        <div className="text-center space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center">
+              <Users className="h-6 w-6 text-blue-600 mr-2" />
+              Partnership Analysis
+            </h2>
+            <p className="text-gray-600">
+              Analyze batting partnerships, combinations, and collaborative performance metrics
+            </p>
+          </div>
+
+          <div className="card max-w-md mx-auto">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Player</h3>
+            <PlayerSearch
+              type="batter"
+              onSelect={handlePlayerSelect}
+              placeholder="Search for a batter..."
+              className="w-full"
+            />
+            {selectedPlayer && (
+              <div className="mt-3 text-sm text-green-600 flex items-center justify-center">
+                <Users className="h-4 w-4 mr-1" />
+                Selected: {selectedPlayer}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -74,21 +117,13 @@ const PartnershipAnalysis = ({ player, filters = {} }) => {
             No Partnership Data Available
           </h3>
           <p className="text-gray-600 mb-4">
-            No partnership data found for <strong>{player}</strong>
+            No partnership data found for <strong>{selectedPlayer}</strong>
           </p>
-          <p className="text-gray-500 text-sm mb-6">
-            This could be because:
-          </p>
-          <ul className="text-gray-500 text-sm space-y-1 mb-6 max-w-md mx-auto">
-            <li>• The player hasn't formed significant partnerships</li>
-            <li>• Partnerships require minimum 6 balls together</li>
-            <li>• Data may not be available for this player</li>
-          </ul>
           <button 
-            onClick={refetch}
+            onClick={() => setSelectedPlayer('')}
             className="btn-primary"
           >
-            Try Again
+            Select Different Player
           </button>
         </div>
       </div>
@@ -100,28 +135,6 @@ const PartnershipAnalysis = ({ player, filters = {} }) => {
     const batsman2 = partnership.batsman2?.trim() || ''
     return batsman1 && batsman2 && batsman1 !== batsman2 && partnership.runs_scored > 0
   })
-
-  if (validPartnerships.length === 0) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-4">
-        <div className="card text-center py-12">
-          <Users className="h-20 w-20 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            No Valid Partnerships Found
-          </h3>
-          <p className="text-gray-600 mb-4">
-            No valid partnership combinations found for <strong>{player}</strong>
-          </p>
-          <button 
-            onClick={refetch}
-            className="btn-primary"
-          >
-            Refresh Data
-          </button>
-        </div>
-      </div>
-    )
-  }
 
   const sortedPartnerships = [...validPartnerships].sort((a, b) => {
     const aVal = a[sortBy] || 0
@@ -142,11 +155,17 @@ const PartnershipAnalysis = ({ player, filters = {} }) => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center">
             <Users className="h-6 w-6 text-blue-600 mr-2" />
-            Partnership Analysis - {player}
+            Partnership Analysis - {selectedPlayer}
           </h2>
           <p className="text-gray-600">
             Found {validPartnerships.length} valid partnership combinations
           </p>
+          <button 
+            onClick={() => setSelectedPlayer('')}
+            className="btn-secondary mt-2"
+          >
+            Change Player
+          </button>
         </div>
 
         {/* Summary Statistics */}
@@ -180,7 +199,7 @@ const PartnershipAnalysis = ({ player, filters = {} }) => {
           <div className="w-full overflow-hidden">
             <PartnershipChart 
               partnerships={topPartnerships} 
-              selectedPlayer={player}
+              selectedPlayer={selectedPlayer}
             />
           </div>
         )}
@@ -189,7 +208,7 @@ const PartnershipAnalysis = ({ player, filters = {} }) => {
         <div className="w-full overflow-hidden">
           <PartnershipTable 
             partnerships={sortedPartnerships}
-            selectedPlayer={player}
+            selectedPlayer={selectedPlayer}
             sortBy={sortBy}
             sortOrder={sortOrder}
             onSort={(field) => {

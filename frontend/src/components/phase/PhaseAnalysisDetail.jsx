@@ -1,16 +1,100 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Clock, Zap, Target, TrendingUp } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import { advancedApiService } from '../../services/advancedApi'
 import LoadingSpinner from '../common/LoadingSpinner'
 import ErrorMessage from '../common/ErrorMessage'
+import PlayerSearch from '../player/PlayerSearch'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
-const PhaseAnalysisDetail = ({ batter, bowler, filters = {} }) => {
+const PhaseAnalysisDetail = ({ 
+  batter: initialBatter, 
+  bowler: initialBowler, 
+  onBatterSelect, 
+  onBowlerSelect, 
+  filters = {} 
+}) => {
+  const [selectedBatter, setSelectedBatter] = useState(initialBatter || '')
+  const [selectedBowler, setSelectedBowler] = useState(initialBowler || '')
+
+  const handleBatterSelect = (batter) => {
+    setSelectedBatter(batter)
+    if (onBatterSelect) {
+      onBatterSelect(batter)
+    }
+  }
+
+  const handleBowlerSelect = (bowler) => {
+    setSelectedBowler(bowler)
+    if (onBowlerSelect) {
+      onBowlerSelect(bowler)
+    }
+  }
+
   const { data: phaseData, loading, error, refetch } = useApi(
-    ['phase-analysis', batter, bowler, filters],
-    () => advancedApiService.getPhaseAnalysis(batter, bowler, filters)
+    ['phase-analysis', selectedBatter, selectedBowler, filters],
+    () => (selectedBatter && selectedBowler) ? 
+      advancedApiService.getPhaseAnalysis(selectedBatter, selectedBowler, filters) : 
+      Promise.resolve(null),
+    {
+      enabled: !!(selectedBatter && selectedBowler && selectedBatter.trim() !== '' && selectedBowler.trim() !== ''),
+      retry: 2
+    }
   )
+
+  if (!selectedBatter || !selectedBowler) {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-4">
+        <div className="text-center space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center">
+              <Clock className="h-6 w-6 text-green-600 mr-2" />
+              Phase Analysis
+            </h2>
+            <p className="text-gray-600">
+              Analyze performance across powerplay, middle overs, and death overs
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            <div className="card">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Batter</h3>
+              <PlayerSearch
+                type="batter"
+                onSelect={handleBatterSelect}
+                placeholder="Search for a batter..."
+                value={selectedBatter}
+                className="w-full"
+              />
+              {selectedBatter && (
+                <div className="mt-3 text-sm text-green-600 flex items-center">
+                  <Target className="h-4 w-4 mr-1" />
+                  Selected: {selectedBatter}
+                </div>
+              )}
+            </div>
+
+            <div className="card">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Bowler</h3>
+              <PlayerSearch
+                type="bowler"
+                onSelect={handleBowlerSelect}
+                placeholder="Search for a bowler..."
+                value={selectedBowler}
+                className="w-full"
+              />
+              {selectedBowler && (
+                <div className="mt-3 text-sm text-green-600 flex items-center">
+                  <Zap className="h-4 w-4 mr-1" />
+                  Selected: {selectedBowler}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -75,9 +159,11 @@ const PhaseAnalysisDetail = ({ batter, bowler, filters = {} }) => {
           <p className="font-medium text-gray-900 mb-2">{label}</p>
           <div className="space-y-1 text-sm">
             <p className="text-blue-600">Runs: {data.runs}</p>
-            <p className="text-green-600">Balls: {data.balls}</p>
-            <p className="text-purple-600">Strike Rate: {data.strike_rate}%</p>
-            <p className="text-orange-600">Boundaries: {data.boundaries}</p>
+            <p className="text-green-600">Strike Rate: {data.strike_rate}%</p>
+            <p className="text-purple-600">Boundaries: {data.boundaries}</p>
+            {data.dismissals > 0 && (
+              <p className="text-red-600">Dismissals: {data.dismissals}</p>
+            )}
           </div>
         </div>
       )
@@ -91,11 +177,25 @@ const PhaseAnalysisDetail = ({ batter, bowler, filters = {} }) => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center">
             <Clock className="h-6 w-6 text-green-600 mr-2" />
-            Phase Analysis - {batter} vs {bowler}
+            Phase Analysis - {selectedBatter} vs {selectedBowler}
           </h2>
           <p className="text-gray-600">
             Performance breakdown across different match phases
           </p>
+          <div className="flex justify-center space-x-4 mt-4">
+            <button 
+              onClick={() => setSelectedBatter('')}
+              className="btn-secondary text-sm"
+            >
+              Change Batter
+            </button>
+            <button 
+              onClick={() => setSelectedBowler('')}
+              className="btn-secondary text-sm"
+            >
+              Change Bowler
+            </button>
+          </div>
         </div>
 
         {/* Phase Summary Cards */}
@@ -217,29 +317,6 @@ const PhaseAnalysisDetail = ({ batter, bowler, filters = {} }) => {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Phase Insights */}
-        <div className="card bg-gradient-to-r from-blue-50 to-purple-50">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Phase Insights</h3>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">Best Phase</h4>
-              <p className="text-gray-600 text-sm">
-                {chartData.reduce((best, current) => 
-                  current.strike_rate > best.strike_rate ? current : best
-                ).phase} with {Math.max(...chartData.map(p => p.strike_rate))}% strike rate
-              </p>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">Most Productive</h4>
-              <p className="text-gray-600 text-sm">
-                {chartData.reduce((best, current) => 
-                  current.runs > best.runs ? current : best
-                ).phase} with {Math.max(...chartData.map(p => p.runs))} runs scored
-              </p>
-            </div>
           </div>
         </div>
       </div>
