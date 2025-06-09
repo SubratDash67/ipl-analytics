@@ -8,7 +8,7 @@ console.log('Environment:', import.meta.env.MODE)
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000, // Increased timeout for deployed backend
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -29,7 +29,7 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor with better error handling for production
+// Response interceptor
 api.interceptors.response.use(
   (response) => {
     if (process.env.NODE_ENV === 'development') {
@@ -43,7 +43,6 @@ api.interceptors.response.use(
                         error.message || 
                         'An error occurred'
     
-    // Handle different error types
     if (error.code === 'ECONNABORTED') {
       console.error('[API] Request timeout')
     } else if (error.response?.status >= 500) {
@@ -124,6 +123,7 @@ export const apiService = {
     return response.data?.venues || []
   },
 
+  // FIXED: Correct venue breakdown endpoint
   async getVenueBreakdown(batter, bowler, filters = {}) {
     const response = await api.get(`/venue-breakdown/${encodeURIComponent(batter)}/${encodeURIComponent(bowler)}`, {
       params: filters
@@ -131,6 +131,7 @@ export const apiService = {
     return response.data
   },
 
+  // FIXED: Correct season trends endpoint
   async getSeasonTrends(batter, bowler, filters = {}) {
     const response = await api.get(`/season-trends/${encodeURIComponent(batter)}/${encodeURIComponent(bowler)}`, {
       params: filters
@@ -138,12 +139,7 @@ export const apiService = {
     return response.data
   },
 
-  async getVenueAnalysis(batter, bowler, venue) {
-    const response = await api.get(`/stats/venue/${encodeURIComponent(batter)}/${encodeURIComponent(bowler)}`, {
-      params: { venue }
-    })
-    return response.data
-  },
+
 
   async getMatchDetails(matchId) {
     const response = await api.get(`/match/${matchId}`)
