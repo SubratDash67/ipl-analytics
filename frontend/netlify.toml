@@ -1,9 +1,11 @@
 [build]
-  publish = "dist"
-  command = "npm run build"
+  base = "frontend"
+  publish = "frontend/dist"
+  command = "npm install && npm run build"
 
 [build.environment]
   NODE_VERSION = "18"
+  VITE_API_URL = "https://ipl-analytics-backend-api.onrender.com/api"
 
 [[redirects]]
   from = "/*"
@@ -16,7 +18,6 @@
     X-Frame-Options = "DENY"
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
 
 [[headers]]
   for = "/static/*"
