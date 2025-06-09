@@ -19,7 +19,6 @@ import { useApi } from '../hooks/useApi'
 import { apiService } from '../services/api'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
-import PlayerSearch from '../components/player/PlayerSearch'
 
 const HomePage = () => {
   const navigate = useNavigate()
