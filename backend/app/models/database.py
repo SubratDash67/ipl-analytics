@@ -1,21 +1,38 @@
 import sqlite3
 import logging
-from typing import List, Dict, Any, Optional
 import os
+from typing import List, Dict, Any, Optional
+from pathlib import Path
 
 
 class DatabaseManager:
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or os.path.join(
-            os.path.dirname(__file__), "..", "..", "data", "ipl_data.db"
-        )
+        if db_path:
+            self.db_path = db_path
+        else:
+            # Check for environment variable first (production)
+            db_url = os.environ.get("DATABASE_URL")
+            if db_url and db_url.startswith("sqlite:///"):
+                self.db_path = db_url.replace("sqlite:///", "")
+            else:
+                # Fallback to default path
+                base_dir = Path(__file__).parent.parent.parent
+                self.db_path = str(base_dir / "data" / "ipl_data.db")
+
         self.logger = logging.getLogger(__name__)
+
+        # Ensure database directory exists
+        db_dir = Path(self.db_path).parent
+        db_dir.mkdir(parents=True, exist_ok=True)
+
+        # Log database path for debugging
+        self.logger.info(f"Database path: {self.db_path}")
 
     def get_connection(self):
         """Get database connection with row factory"""
         try:
             conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row  # This allows dict-like access to rows
+            conn.row_factory = sqlite3.Row
             return conn
         except Exception as e:
             self.logger.error(f"Database connection error: {e}")
