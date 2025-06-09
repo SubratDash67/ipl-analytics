@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { 
   ArrowLeft, 
-  TrendingUp, 
+  BarChart3, 
   Target, 
   Zap, 
   Award,
-  BarChart3,
-  Filter,
-  Download,
-  Share2,
-  Star,
+  TrendingUp,
+  Users,
+  MapPin,
   Calendar,
-  MapPin
+  Filter,
+  Share2,
+  Download,
+  Star
 } from 'lucide-react'
 import { useApi } from '../hooks/useApi'
 import { apiService } from '../services/api'
@@ -23,13 +24,12 @@ import StatCard from '../components/stats/StatCard'
 import PerformanceChart from '../components/charts/PerformanceChart'
 import VenueBreakdown from '../components/analysis/VenueBreakdown'
 import SeasonTrends from '../components/analysis/SeasonTrends'
+
 const HeadToHeadPage = () => {
   const { batter, bowler } = useParams()
-  const navigate = useNavigate()
-  const { addFavorite, favorites } = useApp()
   const [filters, setFilters] = useState({})
   const [showFilters, setShowFilters] = useState(false)
-
+  
   const decodedBatter = decodeURIComponent(batter)
   const decodedBowler = decodeURIComponent(bowler)
 
@@ -42,28 +42,6 @@ const HeadToHeadPage = () => {
     ['filters'],
     () => apiService.getFilters()
   )
-
-  const isFavorite = favorites.some(fav => 
-    fav.batter === decodedBatter && fav.bowler === decodedBowler
-  )
-
-  const handleAddToFavorites = () => {
-    if (!isFavorite) {
-      addFavorite({
-        id: `${decodedBatter}-${decodedBowler}`,
-        batter: decodedBatter,
-        bowler: decodedBowler,
-        timestamp: new Date().toISOString()
-      })
-    }
-  }
-
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: value === 'all' ? null : value
-    }))
-  }
 
   if (loading) {
     return (
@@ -95,7 +73,8 @@ const HeadToHeadPage = () => {
     )
   }
 
-  const { batting_stats, bowling_stats, total_deliveries } = data
+  const battingStats = data.batting_stats || {}
+  const bowlingStats = data.bowling_stats || {}
 
   return (
     <>
@@ -120,10 +99,10 @@ const HeadToHeadPage = () => {
             
             <div className="space-y-1">
               <h1 className="text-3xl lg:text-4xl font-bold text-gray-900">
-                {decodedBatter} <span className="text-blue-600">vs</span> {decodedBowler}
+                {decodedBatter} vs {decodedBowler}
               </h1>
               <p className="text-gray-600">
-                Head-to-head analysis • {total_deliveries} deliveries analyzed
+                Head-to-head analysis • {data.total_deliveries || 0} deliveries analyzed
               </p>
             </div>
           </div>
@@ -137,23 +116,17 @@ const HeadToHeadPage = () => {
               <span>Filters</span>
             </button>
             
-            <button
-              onClick={handleAddToFavorites}
-              disabled={isFavorite}
-              className={`btn-secondary flex items-center space-x-2 ${
-                isFavorite ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : ''
-              }`}
-            >
-              <Star className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
-              <span>{isFavorite ? 'Favorited' : 'Add to Favorites'}</span>
+            <button className="btn-secondary flex items-center space-x-2">
+              <Star className="h-4 w-4" />
+              <span>Add to Favorites</span>
             </button>
-
+            
             <button className="btn-secondary flex items-center space-x-2">
               <Share2 className="h-4 w-4" />
               <span>Share</span>
             </button>
-
-            <button className="btn-primary flex items-center space-x-2">
+            
+            <button className="btn-secondary flex items-center space-x-2">
               <Download className="h-4 w-4" />
               <span>Export</span>
             </button>
@@ -161,50 +134,43 @@ const HeadToHeadPage = () => {
         </div>
 
         {/* Filters */}
-        {showFilters && filtersData && (
-          <div className="card bg-gray-50">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Filter Analysis</h3>
+        {showFilters && (
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
             <div className="grid md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Season</label>
-                <select
+                <label className="label">Season</label>
+                <select 
                   className="input-field"
-                  value={filters.season || 'all'}
-                  onChange={(e) => handleFilterChange('season', e.target.value)}
+                  value={filters.season || ''}
+                  onChange={(e) => setFilters({...filters, season: e.target.value || undefined})}
                 >
-                  <option value="all">All Seasons</option>
-                  {filtersData.seasons?.map(season => (
+                  <option value="">All Seasons</option>
+                  {filtersData?.seasons?.map(season => (
                     <option key={season} value={season}>{season}</option>
                   ))}
                 </select>
               </div>
-              
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Venue</label>
-                <select
+                <label className="label">Venue</label>
+                <select 
                   className="input-field"
-                  value={filters.venue || 'all'}
-                  onChange={(e) => handleFilterChange('venue', e.target.value)}
+                  value={filters.venue || ''}
+                  onChange={(e) => setFilters({...filters, venue: e.target.value || undefined})}
                 >
-                  <option value="all">All Venues</option>
-                  {filtersData.venues?.map(venue => (
+                  <option value="">All Venues</option>
+                  {filtersData?.venues?.map(venue => (
                     <option key={venue} value={venue}>{venue}</option>
                   ))}
                 </select>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Match Type</label>
-                <select
-                  className="input-field"
-                  value={filters.match_type || 'all'}
-                  onChange={(e) => handleFilterChange('match_type', e.target.value)}
+              <div className="flex items-end">
+                <button
+                  onClick={() => setFilters({})}
+                  className="btn-secondary w-full"
                 >
-                  <option value="all">All Matches</option>
-                  <option value="league">League</option>
-                  <option value="playoff">Playoff</option>
-                  <option value="final">Final</option>
-                </select>
+                  Clear Filters
+                </button>
               </div>
             </div>
           </div>
@@ -214,119 +180,108 @@ const HeadToHeadPage = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
             title="Runs Scored"
-            value={batting_stats.runs}
+            value={battingStats.runs || 0}
+            subtitle={`in ${battingStats.balls_faced || 0} balls`}
             icon={Target}
             color="blue"
-            subtitle={`in ${batting_stats.balls_faced} balls`}
           />
           <StatCard
             title="Strike Rate"
-            value={`${batting_stats.strike_rate}%`}
+            value={`${battingStats.strike_rate || 0}%`}
+            subtitle="Runs per 100 balls"
             icon={Zap}
             color="green"
-            subtitle="Runs per 100 balls"
+            type="percentage"
           />
           <StatCard
             title="Dismissals"
-            value={batting_stats.dismissals}
-            icon={Award}
+            value={battingStats.dismissals || 0}
+            subtitle={`Average: ${battingStats.average || 0}`}
+            icon={TrendingUp}
             color="red"
-            subtitle={`Average: ${batting_stats.average}`}
           />
           <StatCard
             title="Boundaries"
-            value={batting_stats.boundaries}
-            icon={TrendingUp}
-            color="purple"
+            value={battingStats.boundaries || 0}
             subtitle="4s and 6s combined"
+            icon={Award}
+            color="purple"
           />
         </div>
 
-        {/* Performance Analysis */}
+        {/* Performance Comparison */}
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Batting Performance */}
           <div className="card">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <Target className="h-5 w-5 mr-2 text-blue-600" />
-                Batting Performance
-              </h2>
-              <span className="text-sm text-gray-500">{decodedBatter}</span>
-            </div>
-            
+            <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+              <Target className="h-5 w-5 mr-2 text-blue-600" />
+              Batting Performance
+            </h2>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{batting_stats.runs}</div>
+                  <div className="text-2xl font-bold text-blue-600">{battingStats.runs || 0}</div>
                   <div className="text-sm text-gray-600">Total Runs</div>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{batting_stats.balls_faced}</div>
+                  <div className="text-2xl font-bold text-green-600">{battingStats.balls_faced || 0}</div>
                   <div className="text-sm text-gray-600">Balls Faced</div>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">{batting_stats.strike_rate}%</div>
+                  <div className="text-2xl font-bold text-purple-600">{battingStats.strike_rate || 0}%</div>
                   <div className="text-sm text-gray-600">Strike Rate</div>
                 </div>
                 <div className="bg-orange-50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">{batting_stats.boundaries}</div>
+                  <div className="text-2xl font-bold text-orange-600">{battingStats.boundaries || 0}</div>
                   <div className="text-sm text-gray-600">Boundaries</div>
                 </div>
               </div>
-
               <div className="pt-4 border-t border-gray-200">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Batting Average</span>
-                  <span className="font-semibold text-gray-900">{batting_stats.average}</span>
+                  <span className="font-semibold text-gray-900">{battingStats.average || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Times Dismissed</span>
-                  <span className="font-semibold text-gray-900">{batting_stats.dismissals}</span>
+                  <span className="font-semibold text-gray-900">{battingStats.dismissals || 0}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Bowling Performance */}
           <div className="card">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2 text-red-600" />
-                Bowling Performance
-              </h2>
-              <span className="text-sm text-gray-500">{decodedBowler}</span>
-            </div>
-            
+            <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+              <BarChart3 className="h-5 w-5 mr-2 text-red-600" />
+              Bowling Performance
+            </h2>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">{bowling_stats.runs_conceded}</div>
+                  <div className="text-2xl font-bold text-red-600">{bowlingStats.runs_conceded || 0}</div>
                   <div className="text-sm text-gray-600">Runs Conceded</div>
                 </div>
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{bowling_stats.balls_bowled}</div>
+                  <div className="text-2xl font-bold text-blue-600">{bowlingStats.balls_bowled || 0}</div>
                   <div className="text-sm text-gray-600">Balls Bowled</div>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{bowling_stats.wickets}</div>
+                  <div className="text-2xl font-bold text-green-600">{bowlingStats.wickets || 0}</div>
                   <div className="text-sm text-gray-600">Wickets</div>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">{bowling_stats.economy}</div>
+                  <div className="text-2xl font-bold text-purple-600">{bowlingStats.economy || 0}</div>
                   <div className="text-sm text-gray-600">Economy Rate</div>
                 </div>
               </div>
-
               <div className="pt-4 border-t border-gray-200">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Dot Balls</span>
-                  <span className="font-semibold text-gray-900">{bowling_stats.dot_balls}</span>
+                  <span className="font-semibold text-gray-900">{bowlingStats.dot_balls || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Dot Ball %</span>
                   <span className="font-semibold text-gray-900">
-                    {bowling_stats.balls_bowled > 0 ? 
-                      ((bowling_stats.dot_balls / bowling_stats.balls_bowled) * 100).toFixed(1) : 0}%
+                    {bowlingStats.balls_bowled > 0 ? 
+                      ((bowlingStats.dot_balls / bowlingStats.balls_bowled) * 100).toFixed(1) : 0}%
                   </span>
                 </div>
               </div>
@@ -334,25 +289,25 @@ const HeadToHeadPage = () => {
           </div>
         </div>
 
-        {/* Performance Chart */}
+        {/* Performance Visualization */}
         <PerformanceChart 
-          battingStats={batting_stats}
-          bowlingStats={bowling_stats}
           batter={decodedBatter}
           bowler={decodedBowler}
+          battingStats={battingStats}
+          bowlingStats={bowlingStats}
         />
 
-        {/* Additional Analysis */}
+        {/* Venue and Season Analysis */}
         <div className="grid lg:grid-cols-2 gap-8">
           <VenueBreakdown 
-            batter={decodedBatter}
-            bowler={decodedBowler}
-            filters={filters}
+            batter={decodedBatter} 
+            bowler={decodedBowler} 
+            filters={filters} 
           />
           <SeasonTrends 
-            batter={decodedBatter}
-            bowler={decodedBowler}
-            filters={filters}
+            batter={decodedBatter} 
+            bowler={decodedBowler} 
+            filters={filters} 
           />
         </div>
 
@@ -361,25 +316,25 @@ const HeadToHeadPage = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Explore More</h3>
           <div className="grid md:grid-cols-3 gap-4">
             <Link
-              to={`/player/${encodeURIComponent(decodedBatter)}`}
+              to={`/advanced?tab=partnerships&player=${encodeURIComponent(decodedBatter)}`}
               className="flex items-center p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <Target className="h-5 w-5 text-blue-600 mr-3" />
-              <span className="font-medium">{decodedBatter} Profile</span>
+              <Users className="h-5 w-5 text-blue-600 mr-3" />
+              <span className="font-medium">Partnership Analysis</span>
             </Link>
             <Link
-              to={`/player/${encodeURIComponent(decodedBowler)}`}
+              to={`/advanced?tab=phases&batter=${encodeURIComponent(decodedBatter)}&bowler=${encodeURIComponent(decodedBowler)}`}
               className="flex items-center p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <BarChart3 className="h-5 w-5 text-red-600 mr-3" />
-              <span className="font-medium">{decodedBowler} Profile</span>
+              <Calendar className="h-5 w-5 text-green-600 mr-3" />
+              <span className="font-medium">Phase Analysis</span>
             </Link>
             <Link
-              to="/compare"
+              to={`/venue/${encodeURIComponent(decodedBatter)}/${encodeURIComponent(decodedBowler)}`}
               className="flex items-center p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <TrendingUp className="h-5 w-5 text-purple-600 mr-3" />
-              <span className="font-medium">Compare Players</span>
+              <MapPin className="h-5 w-5 text-purple-600 mr-3" />
+              <span className="font-medium">Venue Analysis</span>
             </Link>
           </div>
         </div>
