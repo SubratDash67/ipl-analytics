@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
+import { useDarkMode } from '../../hooks/useDarkMode'
 
 // Initial state
 const initialState = {
-  theme: 'light',
   selectedFilters: {
     season: null,
     venue: null,
@@ -18,7 +18,6 @@ const initialState = {
 
 // Action types
 const ActionTypes = {
-  SET_THEME: 'SET_THEME',
   SET_FILTERS: 'SET_FILTERS',
   ADD_RECENT_SEARCH: 'ADD_RECENT_SEARCH',
   ADD_FAVORITE: 'ADD_FAVORITE',
@@ -27,16 +26,11 @@ const ActionTypes = {
   SET_ERROR: 'SET_ERROR',
   CLEAR_ERROR: 'CLEAR_ERROR',
   RESET_FILTERS: 'RESET_FILTERS',
-  INITIALIZE_THEME: 'INITIALIZE_THEME',
 }
 
 // Reducer function
 const appReducer = (state, action) => {
   switch (action.type) {
-    case ActionTypes.SET_THEME:
-    case ActionTypes.INITIALIZE_THEME:
-      return { ...state, theme: action.payload }
-    
     case ActionTypes.SET_FILTERS:
       return {
         ...state,
@@ -88,22 +82,7 @@ const AppContext = createContext()
 // Provider component
 export const AppProvider = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState)
-
-  // Initialize theme from localStorage on mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('ipl-analytics-theme')
-    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    const initialTheme = savedTheme || systemTheme
-    
-    dispatch({ type: ActionTypes.INITIALIZE_THEME, payload: initialTheme })
-    
-    // Apply theme to document
-    if (initialTheme === 'dark') {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [])
+  const [theme, setTheme] = useDarkMode() // Use the proper dark mode hook
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -121,18 +100,6 @@ export const AppProvider = ({ children }) => {
   }, [])
 
   // Action creators
-  const setTheme = useCallback((theme) => {
-    dispatch({ type: ActionTypes.SET_THEME, payload: theme })
-    localStorage.setItem('ipl-analytics-theme', theme)
-    
-    // Apply theme to document immediately
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [])
-
   const setFilters = useCallback((filters) => {
     dispatch({ type: ActionTypes.SET_FILTERS, payload: filters })
   }, [])
@@ -177,6 +144,7 @@ export const AppProvider = ({ children }) => {
 
   const value = {
     ...state,
+    theme,
     setTheme,
     setFilters,
     addRecentSearch,
@@ -199,3 +167,6 @@ export const useApp = () => {
   }
   return context
 }
+
+// Export context for testing purposes
+export { AppContext }

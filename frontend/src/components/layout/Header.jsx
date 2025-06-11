@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { 
   BarChart3, 
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import PlayerSearch from '../player/PlayerSearch'
+
 const Header = () => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -26,26 +27,8 @@ const Header = () => {
   }
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    setTheme(newTheme)
+    setTheme(!theme)
   }
-
-  // Apply theme to document on mount and theme change
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [theme])
-
-  // Initialize theme from localStorage on mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('ipl-analytics-theme') || 'light'
-    if (savedTheme !== theme) {
-      setTheme(savedTheme)
-    }
-  }, [])
 
   const navigation = [
     {
@@ -74,7 +57,7 @@ const Header = () => {
   }
 
   return (
-    <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-colors duration-200">
+    <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-all duration-200">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -84,7 +67,6 @@ const Header = () => {
               alt="IPL Analytics Logo" 
               className="h-10 w-10 object-contain group-hover:scale-105 transition-transform duration-200"
               onError={(e) => {
-                // Fallback to icon if logo fails to load
                 e.target.style.display = 'none'
                 e.target.nextSibling.style.display = 'block'
               }}
@@ -172,7 +154,7 @@ const Header = () => {
               className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
               aria-label="Toggle theme"
             >
-              {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              {theme ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
 
             {/* Settings */}
