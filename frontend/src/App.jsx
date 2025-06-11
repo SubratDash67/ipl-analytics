@@ -9,6 +9,8 @@ import { AppProvider } from './components/contexts/AppContext'
 import Layout from './components/layout/Layout'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import LoadingSpinner from './components/common/LoadingSpinner'
+import ApiWarmingScreen from './components/common/ApiWarmingScreen'
+import { useApiStatus } from './hooks/useApiStatus'
 
 // Lazy load pages for better performance
 const HomePage = React.lazy(() => import('./pages/HomePage'))
@@ -32,16 +34,14 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {
-        // Don't retry on 4xx errors
         if (error?.status >= 400 && error?.status < 500) {
           return false
         }
-        // Retry up to 3 times for other errors
         return failureCount < 3
       },
       retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      cacheTime: 1000 * 60 * 10, // 10 minutes
+      staleTime: 1000 * 60 * 5,
+      cacheTime: 1000 * 60 * 10,
       refetchOnWindowFocus: false,
       refetchOnMount: true,
       refetchOnReconnect: true,
@@ -56,41 +56,63 @@ const PageLoader = ({ text = "Loading page..." }) => (
   </div>
 )
 
+// Main App Content Component
+const AppContent = () => {
+  const { isApiReady, isChecking, attempts, error, retryApiCheck } = useApiStatus()
+
+  // Show warming screen while API is not ready
+  if (!isApiReady) {
+    return (
+      <ApiWarmingScreen 
+        isChecking={isChecking}
+        attempts={attempts}
+        error={error}
+        onRetry={retryApiCheck}
+      />
+    )
+  }
+
+  // Show main app once API is ready
+  return (
+    <Router>
+      <ErrorBoundary>
+        <Layout>
+          <main className="flex-1 py-8">
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Main application routes */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/head-to-head/:batter/:bowler" element={<HeadToHeadPage />} />
+                <Route path="/player/:playerName" element={<PlayerPage />} />
+                <Route path="/compare" element={<ComparisonPage />} />
+                <Route path="/advanced" element={<AdvancedAnalyticsPage />} />
+                <Route path="/venue/:batter/:bowler" element={<VenuePage />} />
+                
+                {/* Information pages */}
+                <Route path="/api-docs" element={<ApiDocsPage />} />
+                <Route path="/data-sources" element={<DataSourcesPage />} />
+                <Route path="/methodology" element={<MethodologyPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/terms" element={<TermsPage />} />
+                
+                {/* Catch all route for 404 */}
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </Suspense>
+          </main>
+        </Layout>
+      </ErrorBoundary>
+    </Router>
+  )
+}
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <AppProvider>
-          <Router>
-            <ErrorBoundary>
-              <Layout>
-                <main className="flex-1 py-8">
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                      {/* Main application routes */}
-                      <Route path="/" element={<HomePage />} />
-                      <Route path="/head-to-head/:batter/:bowler" element={<HeadToHeadPage />} />
-                      <Route path="/player/:playerName" element={<PlayerPage />} />
-                      <Route path="/compare" element={<ComparisonPage />} />
-                      <Route path="/advanced" element={<AdvancedAnalyticsPage />} />
-                      <Route path="/venue/:batter/:bowler" element={<VenuePage />} />
-                      
-                      {/* Information pages */}
-                      <Route path="/api-docs" element={<ApiDocsPage />} />
-                      <Route path="/data-sources" element={<DataSourcesPage />} />
-                      <Route path="/methodology" element={<MethodologyPage />} />
-                      <Route path="/about" element={<AboutPage />} />
-                      <Route path="/privacy" element={<PrivacyPage />} />
-                      <Route path="/terms" element={<TermsPage />} />
-                      
-                      {/* Catch all route for 404 */}
-                      <Route path="*" element={<NotFoundPage />} />
-                    </Routes>
-                  </Suspense>
-                </main>
-              </Layout>
-            </ErrorBoundary>
-          </Router>
+          <AppContent />
         </AppProvider>
       </HelmetProvider>
 
