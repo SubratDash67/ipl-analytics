@@ -19,6 +19,7 @@ import { cricketHelpers } from '../utils/cricketHelpers'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import ComparisonChart from '../components/charts/ComparisonChart'
+
 const ComparisonPage = () => {
   const [players, setPlayers] = useState([])
   const [playerType, setPlayerType] = useState('batter')
@@ -118,11 +119,11 @@ const ComparisonPage = () => {
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
-          <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 flex items-center justify-center">
+          <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white flex items-center justify-center">
             <Users className="h-8 w-8 mr-3 text-blue-600" />
             Player Comparison
           </h1>
-          <p className="text-gray-600 text-lg max-w-3xl mx-auto">
+          <p className="text-gray-600 dark:text-gray-300 text-lg max-w-3xl mx-auto">
             Compare up to 4 players side by side. Analyze their performance metrics, 
             career statistics, and identify strengths and weaknesses.
           </p>
@@ -130,7 +131,7 @@ const ComparisonPage = () => {
 
         {/* Player Type Selection */}
         <div className="flex justify-center">
-          <div className="flex bg-gray-100 rounded-lg p-1">
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <button
               onClick={() => {
                 setPlayerType('batter')
@@ -139,8 +140,8 @@ const ComparisonPage = () => {
               }}
               className={`px-6 py-3 rounded-md text-sm font-medium transition-colors ${
                 playerType === 'batter'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               <Target className="h-4 w-4 inline mr-2" />
@@ -154,8 +155,8 @@ const ComparisonPage = () => {
               }}
               className={`px-6 py-3 rounded-md text-sm font-medium transition-colors ${
                 playerType === 'bowler'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               <BarChart3 className="h-4 w-4 inline mr-2" />
@@ -167,7 +168,7 @@ const ComparisonPage = () => {
         {/* Player Selection */}
         <div className="card">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               Select Players ({players.length}/4)
             </h2>
             {players.length >= 2 && (
@@ -190,12 +191,12 @@ const ComparisonPage = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {[0, 1, 2, 3].map((index) => (
-              <div key={index} className="border-2 border-dashed border-gray-300 rounded-lg p-4 min-h-24">
+              <div key={index} className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 min-h-24">
                 {players[index] ? (
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900">{players[index]}</p>
-                      <p className="text-sm text-gray-500 capitalize">{playerType}</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{players[index]}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{playerType}</p>
                     </div>
                     <button
                       onClick={() => removePlayer(players[index])}
@@ -205,7 +206,7 @@ const ComparisonPage = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="text-center text-gray-500">
+                  <div className="text-center text-gray-500 dark:text-gray-400">
                     <Plus className="h-6 w-6 mx-auto mb-2" />
                     <p className="text-sm">Add Player {index + 1}</p>
                   </div>
@@ -239,20 +240,20 @@ const ComparisonPage = () => {
           />
         )}
 
-        {/* Comparison Results */}
+        {/* Comparison Results - REMOVED GREEN HIGHLIGHTS */}
         {playersData.length >= 2 && !loading && (
           <div className="space-y-8">
             {/* Statistics Table */}
             <div className="card overflow-x-auto">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
                 Statistical Comparison
               </h3>
               <table className="w-full">
                 <thead>
-                  <tr className="border-b-2 border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Statistic</th>
+                  <tr className="border-b-2 border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">Statistic</th>
                     {playersData.map((player, index) => (
-                      <th key={index} className="text-center py-3 px-4 font-medium text-gray-900">
+                      <th key={index} className="text-center py-3 px-4 font-medium text-gray-900 dark:text-white">
                         {player.name}
                       </th>
                     ))}
@@ -260,21 +261,16 @@ const ComparisonPage = () => {
                 </thead>
                 <tbody>
                   {comparisonStats.map((stat) => (
-                    <tr key={stat.key} className="border-b border-gray-100">
+                    <tr key={stat.key} className="border-b border-gray-100 dark:border-gray-700">
                       <td className="py-3 px-4 flex items-center">
-                        <stat.icon className="h-4 w-4 mr-2 text-gray-500" />
+                        <stat.icon className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                         {stat.label}
                       </td>
                       {playersData.map((player, index) => {
                         const value = getStatValue(player.stats, stat.key)
-                        const isHighest = playersData.every(p => 
-                          getStatValue(p.stats, stat.key) <= value
-                        ) && value > 0
                         
                         return (
-                          <td key={index} className={`py-3 px-4 text-center font-medium ${
-                            isHighest ? 'text-green-600 bg-green-50' : 'text-gray-900'
-                          }`}>
+                          <td key={index} className="py-3 px-4 text-center font-medium text-gray-900 dark:text-white">
                             {value.toLocaleString()}
                           </td>
                         )
@@ -282,46 +278,36 @@ const ComparisonPage = () => {
                     </tr>
                   ))}
                   
-                  {/* Derived Statistics with Correct Calculations */}
+                  {/* Derived Statistics without highlights */}
                   {playerType === 'batter' && (
                     <>
-                      <tr className="border-b border-gray-100">
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
                         <td className="py-3 px-4 flex items-center">
-                          <TrendingUp className="h-4 w-4 mr-2 text-gray-500" />
+                          <TrendingUp className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                           Strike Rate
                         </td>
                         {playersData.map((player, index) => {
                           const derived = calculateDerivedStats(player.stats)
                           const value = derived.strikeRate
-                          const isHighest = playersData.every(p => 
-                            calculateDerivedStats(p.stats).strikeRate <= value
-                          ) && value > 0
                           
                           return (
-                            <td key={index} className={`py-3 px-4 text-center font-medium ${
-                              isHighest ? 'text-green-600 bg-green-50' : 'text-gray-900'
-                            }`}>
+                            <td key={index} className="py-3 px-4 text-center font-medium text-gray-900 dark:text-white">
                               {value.toFixed(2)}%
                             </td>
                           )
                         })}
                       </tr>
-                      <tr className="border-b border-gray-100">
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
                         <td className="py-3 px-4 flex items-center">
-                          <Target className="h-4 w-4 mr-2 text-gray-500" />
+                          <Target className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                           Average
                         </td>
                         {playersData.map((player, index) => {
                           const derived = calculateDerivedStats(player.stats)
                           const value = derived.average
-                          const isHighest = playersData.every(p => 
-                            calculateDerivedStats(p.stats).average <= value
-                          ) && value > 0
                           
                           return (
-                            <td key={index} className={`py-3 px-4 text-center font-medium ${
-                              isHighest ? 'text-green-600 bg-green-50' : 'text-gray-900'
-                            }`}>
+                            <td key={index} className="py-3 px-4 text-center font-medium text-gray-900 dark:text-white">
                               {value.toFixed(2)}
                             </td>
                           )
@@ -332,37 +318,32 @@ const ComparisonPage = () => {
 
                   {playerType === 'bowler' && (
                     <>
-                      <tr className="border-b border-gray-100">
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
                         <td className="py-3 px-4 flex items-center">
-                          <TrendingUp className="h-4 w-4 mr-2 text-gray-500" />
+                          <TrendingUp className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                           Economy Rate
                         </td>
                         {playersData.map((player, index) => {
                           const derived = calculateDerivedStats(player.stats)
                           const value = derived.economy
-                          const isLowest = playersData.every(p => 
-                            calculateDerivedStats(p.stats).economy >= value
-                          ) && value > 0
                           
                           return (
-                            <td key={index} className={`py-3 px-4 text-center font-medium ${
-                              isLowest ? 'text-green-600 bg-green-50' : 'text-gray-900'
-                            }`}>
+                            <td key={index} className="py-3 px-4 text-center font-medium text-gray-900 dark:text-white">
                               {value.toFixed(2)}
                             </td>
                           )
                         })}
                       </tr>
-                      <tr className="border-b border-gray-100">
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
                         <td className="py-3 px-4 flex items-center">
-                          <Target className="h-4 w-4 mr-2 text-gray-500" />
+                          <Target className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                           Bowling Average
                         </td>
                         {playersData.map((player, index) => {
                           const derived = calculateDerivedStats(player.stats)
                           
                           return (
-                            <td key={index} className="py-3 px-4 text-center font-medium text-gray-900">
+                            <td key={index} className="py-3 px-4 text-center font-medium text-gray-900 dark:text-white">
                               {derived.average.toFixed(2)}
                             </td>
                           )
@@ -374,7 +355,6 @@ const ComparisonPage = () => {
               </table>
             </div>
 
-            {/* Rest of the component remains the same */}
             <ComparisonChart 
               players={playersData}
               playerType={playerType}
@@ -387,10 +367,10 @@ const ComparisonPage = () => {
         {players.length === 0 && (
           <div className="card text-center py-12">
             <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               Start Your Comparison
             </h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-md mx-auto">
               Add at least 2 players to begin comparing their statistics and performance metrics.
             </p>
           </div>

@@ -802,3 +802,112 @@
   content: '';
   animation: loading-dots 1.5s infinite;
 }
+/* Dark Mode Variables */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-tertiary: #6b7280;
+  --border-primary: #e5e7eb;
+  --border-secondary: #d1d5db;
+}
+
+.dark {
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+  --text-primary: #f9fafb;
+  --text-secondary: #e5e7eb;
+  --text-tertiary: #9ca3af;
+  --border-primary: #374151;
+  --border-secondary: #4b5563;
+}
+
+/* Apply dark mode styles */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.dark .card {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+.dark .input-field {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+.dark .input-field:focus {
+  border-color: #3b82f6;
+  background-color: var(--bg-secondary);
+}
+
+.dark .btn-secondary {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+.dark .btn-secondary:hover {
+  background-color: var(--bg-secondary);
+}
+
+/* Dark mode for specific components */
+.dark .stat-card {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-primary);
+}
+
+.dark .nav-link-inactive {
+  color: var(--text-tertiary);
+}
+
+.dark .nav-link-inactive:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-tertiary);
+}
+
+.dark .dropdown {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-primary);
+}
+
+.dark .dropdown-item:hover {
+  background-color: var(--bg-tertiary);
+}
+
+/* Dark mode for charts */
+.dark .recharts-cartesian-grid line {
+  stroke: var(--border-primary);
+}
+
+.dark .recharts-text {
+  fill: var(--text-secondary);
+}
+
+/* Dark mode for tables */
+.dark table {
+  color: var(--text-primary);
+}
+
+.dark th {
+  border-color: var(--border-primary);
+}
+
+.dark td {
+  border-color: var(--border-secondary);
+}
+
+.dark tr:hover {
+  background-color: var(--bg-tertiary);
+}
