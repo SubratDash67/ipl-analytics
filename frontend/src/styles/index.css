@@ -4,6 +4,37 @@
 
 /* Base Styles */
 @layer base {
+  /* CSS Custom Properties for Toast Notifications */
+  :root {
+    --toast-bg: #ffffff;
+    --toast-color: #374151;
+    --toast-border: #e5e7eb;
+    --toast-success-bg: #f0fdf4;
+    --toast-success-color: #166534;
+    --toast-success-border: #bbf7d0;
+    --toast-error-bg: #fef2f2;
+    --toast-error-color: #dc2626;
+    --toast-error-border: #fecaca;
+    --toast-loading-bg: #eff6ff;
+    --toast-loading-color: #1d4ed8;
+    --toast-loading-border: #dbeafe;
+  }
+
+  .dark {
+    --toast-bg: #374151;
+    --toast-color: #f3f4f6;
+    --toast-border: #4b5563;
+    --toast-success-bg: #064e3b;
+    --toast-success-color: #bbf7d0;
+    --toast-success-border: #059669;
+    --toast-error-bg: #7f1d1d;
+    --toast-error-color: #fecaca;
+    --toast-error-border: #dc2626;
+    --toast-loading-bg: #1e3a8a;
+    --toast-loading-color: #dbeafe;
+    --toast-loading-border: #3b82f6;
+  }
+
   * {
     box-sizing: border-box;
   }

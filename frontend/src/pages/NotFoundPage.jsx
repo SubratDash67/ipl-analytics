@@ -88,15 +88,15 @@ const NotFoundPage = () => {
                 <Link
                   key={index}
                   to={link.href}
-                  className="group p-6 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                  className="group p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md transition-all duration-200"
                 >
-                  <div className={`w-12 h-12 bg-${link.color}-100 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-${link.color}-200 transition-colors`}>
-                    <link.icon className={`h-6 w-6 text-${link.color}-600`} />
+                  <div className={`w-12 h-12 bg-${link.color}-100 dark:bg-${link.color}-900/30 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-${link.color}-200 dark:group-hover:bg-${link.color}-800/30 transition-colors`}>
+                    <link.icon className={`h-6 w-6 text-${link.color}-600 dark:text-${link.color}-400`} />
                   </div>
-                  <h3 className={`font-semibold text-gray-900 mb-2 group-hover:text-${link.color}-600 transition-colors`}>
+                  <h3 className={`font-semibold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-${link.color}-600 dark:group-hover:text-${link.color}-400 transition-colors`}>
                     {link.title}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     {link.description}
                   </p>
                 </Link>

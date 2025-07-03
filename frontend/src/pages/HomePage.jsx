@@ -358,40 +358,40 @@ const HomePage = () => {
           <div className="grid md:grid-cols-3 gap-4">
             <Link
               to="/compare"
-              className="flex items-center p-4 bg-white rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md group"
+              className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 shadow-sm hover:shadow-md group"
             >
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4 group-hover:bg-blue-200 transition-colors">
-                <Users className="h-5 w-5 text-blue-600" />
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mr-4 group-hover:bg-blue-200 dark:group-hover:bg-blue-800/30 transition-colors">
+                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <span className="font-medium text-gray-900 group-hover:text-blue-700">Player Comparison</span>
-                <p className="text-sm text-gray-500">Compare multiple players</p>
+                <span className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-300">Player Comparison</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Compare multiple players</p>
               </div>
             </Link>
             
             <Link
               to="/advanced?tab=probability"
-              className="flex items-center p-4 bg-white rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md group"
+              className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 shadow-sm hover:shadow-md group"
             >
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4 group-hover:bg-green-200 transition-colors">
-                <Calculator className="h-5 w-5 text-green-600" />
+              <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mr-4 group-hover:bg-green-200 dark:group-hover:bg-green-800/30 transition-colors">
+                <Calculator className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <span className="font-medium text-gray-900 group-hover:text-green-700">Win Calculator</span>
-                <p className="text-sm text-gray-500">Match probability tool</p>
+                <span className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-green-700 dark:group-hover:text-green-300">Win Calculator</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Match probability tool</p>
               </div>
             </Link>
             
             <Link
               to="/advanced?tab=form"
-              className="flex items-center p-4 bg-white rounded-lg hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md group"
+              className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 shadow-sm hover:shadow-md group"
             >
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4 group-hover:bg-purple-200 transition-colors">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
+              <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mr-4 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/30 transition-colors">
+                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <span className="font-medium text-gray-900 group-hover:text-purple-700">Form Analysis</span>
-                <p className="text-sm text-gray-500">Recent performance trends</p>
+                <span className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-purple-700 dark:group-hover:text-purple-300">Form Analysis</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Recent performance trends</p>
               </div>
             </Link>
           </div>

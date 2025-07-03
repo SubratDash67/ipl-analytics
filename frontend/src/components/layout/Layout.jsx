@@ -10,8 +10,11 @@ const Layout = ({ children }) => {
   const { theme } = useApp()
   const isHomePage = location.pathname === '/'
 
+  // Note: The dark mode class is already handled by the useDarkMode hook in AppContext
+  // which applies the 'dark' class to document.documentElement
+
   return (
-    <div className={`min-h-screen bg-gray-50 flex flex-col ${theme === 'dark' ? 'dark' : ''}`}>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-200">
       <Header />
       {!isHomePage && <Breadcrumbs />}
       <main className="flex-1 container mx-auto px-4 py-8">

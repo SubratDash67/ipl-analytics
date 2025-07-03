@@ -121,10 +121,11 @@ const App = () => {
         position="top-right"
         toastOptions={{
           duration: 4000,
+          className: '',
           style: {
-            background: 'white',
-            color: '#374151',
-            border: '1px solid #e5e7eb',
+            background: 'var(--toast-bg)',
+            color: 'var(--toast-color)',
+            border: '1px solid var(--toast-border)',
             borderRadius: '0.5rem',
             padding: '16px',
             fontSize: '14px',
@@ -137,9 +138,9 @@ const App = () => {
               secondary: '#ffffff',
             },
             style: {
-              background: '#f0fdf4',
-              color: '#166534',
-              border: '1px solid #bbf7d0',
+              background: 'var(--toast-success-bg)',
+              color: 'var(--toast-success-color)',
+              border: '1px solid var(--toast-success-border)',
             },
           },
           error: {
@@ -149,17 +150,17 @@ const App = () => {
               secondary: '#ffffff',
             },
             style: {
-              background: '#fef2f2',
-              color: '#dc2626',
-              border: '1px solid #fecaca',
+              background: 'var(--toast-error-bg)',
+              color: 'var(--toast-error-color)',
+              border: '1px solid var(--toast-error-border)',
             },
           },
           loading: {
             duration: Infinity,
             style: {
-              background: '#eff6ff',
-              color: '#1d4ed8',
-              border: '1px solid #dbeafe',
+              background: 'var(--toast-loading-bg)',
+              color: 'var(--toast-loading-color)',
+              border: '1px solid var(--toast-loading-border)',
             },
           },
         }}

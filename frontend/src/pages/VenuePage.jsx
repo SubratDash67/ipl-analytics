@@ -310,24 +310,24 @@ const VenuePage = () => {
           <div className="grid md:grid-cols-3 gap-4">
             <Link
               to={`/head-to-head/${encodeURIComponent(decodedBatter)}/${encodeURIComponent(decodedBowler)}`}
-              className="flex items-center p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center p-3 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              <BarChart3 className="h-5 w-5 text-blue-600 mr-3" />
-              <span className="font-medium">Head-to-Head Analysis</span>
+              <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+              <span className="font-medium text-gray-900 dark:text-gray-100">Head-to-Head Analysis</span>
             </Link>
             <Link
               to={`/advanced?tab=partnerships&player=${encodeURIComponent(decodedBatter)}`}
-              className="flex items-center p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center p-3 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              <Users className="h-5 w-5 text-green-600 mr-3" />
-              <span className="font-medium">Partnership Analysis</span>
+              <Users className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
+              <span className="font-medium text-gray-900 dark:text-gray-100">Partnership Analysis</span>
             </Link>
             <Link
               to={`/advanced?tab=phases&batter=${encodeURIComponent(decodedBatter)}&bowler=${encodeURIComponent(decodedBowler)}`}
-              className="flex items-center p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center p-3 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              <Calendar className="h-5 w-5 text-purple-600 mr-3" />
-              <span className="font-medium">Phase Analysis</span>
+              <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400 mr-3" />
+              <span className="font-medium text-gray-900 dark:text-gray-100">Phase Analysis</span>
             </Link>
           </div>
         </div>

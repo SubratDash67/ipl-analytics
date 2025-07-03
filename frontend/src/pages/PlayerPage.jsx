@@ -332,28 +332,28 @@ const PlayerPage = () => {  // Changed from PlayerStatsPage to PlayerPage
 
         {/* Quick Actions */}
         <div className="card bg-gradient-to-r from-blue-50 to-purple-50">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Explore More</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Explore More</h3>
           <div className="grid md:grid-cols-3 gap-4">
             <Link
               to={`/advanced?tab=form`}
-              className="flex items-center p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center p-3 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              <TrendingUp className="h-5 w-5 text-green-600 mr-3" />
-              <span className="font-medium">Form Analysis</span>
+              <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
+              <span className="font-medium text-gray-900 dark:text-gray-100">Form Analysis</span>
             </Link>
             <Link
               to="/compare"
-              className="flex items-center p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center p-3 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              <Users className="h-5 w-5 text-purple-600 mr-3" />
-              <span className="font-medium">Compare Players</span>
+              <Users className="h-5 w-5 text-purple-600 dark:text-purple-400 mr-3" />
+              <span className="font-medium text-gray-900 dark:text-gray-100">Compare Players</span>
             </Link>
             <Link
               to="/advanced"
-              className="flex items-center p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center p-3 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              <Zap className="h-5 w-5 text-blue-600 mr-3" />
-              <span className="font-medium">Advanced Analytics</span>
+              <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+              <span className="font-medium text-gray-900 dark:text-gray-100">Advanced Analytics</span>
             </Link>
           </div>
         </div>

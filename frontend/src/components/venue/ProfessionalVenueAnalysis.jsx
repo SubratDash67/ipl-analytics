@@ -146,29 +146,29 @@ const ProfessionalVenueAnalysis = ({ batter, bowler }) => {
                   {batter} - Batting Performance
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                    <div className="text-3xl font-bold text-blue-600">
+                  <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                       {venueStats.batting_stats.runs}
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">Runs Scored</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Runs Scored</div>
                   </div>
-                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                    <div className="text-3xl font-bold text-green-600">
+                  <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                    <div className="text-3xl font-bold text-green-600 dark:text-green-400">
                       {venueStats.batting_stats.strike_rate}%
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">Strike Rate</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Strike Rate</div>
                   </div>
-                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                    <div className="text-3xl font-bold text-purple-600">
+                  <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                    <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
                       {venueStats.batting_stats.boundaries}
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">Boundaries</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Boundaries</div>
                   </div>
-                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                    <div className="text-3xl font-bold text-orange-600">
+                  <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                    <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
                       {venueStats.batting_stats.balls_faced}
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">Balls Faced</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Balls Faced</div>
                   </div>
                 </div>
               </div>
